@@ -3,7 +3,7 @@
   "short_name": "QuestMore",
   "description": "Nigeria's trusted platform for certified construction, electrical, plumbing, property, and engineering services. Book verified professionals instantly.",
   "start_url": "/?source=pwa",
-  "id": "questmore-pwa-v1",
+  "id": "/?source=pwa",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "portrait-primary",
