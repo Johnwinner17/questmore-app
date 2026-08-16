@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db, ensureDbInitialized } from "@/db";
 import { serviceRequests, notifications } from "@/db/schema";
 import { NextRequest, NextResponse } from "next/server";
 import type { ServiceRequest } from "@/lib/types";
@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDbInitialized().catch(() => {});
     const body = await req.json();
     const {
       serviceId,

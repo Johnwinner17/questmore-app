@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db, ensureDbInitialized } from "@/db";
 import {
   categories, subcategories, services, banners, reviews,
   serviceRequests, projectGallery, faqs, serviceAreas,
@@ -57,6 +57,7 @@ async function dispatchNotification({
 }
 
 export async function GET(req: NextRequest) {
+  await ensureDbInitialized().catch(() => {});
   const table = req.nextUrl.searchParams.get("table");
 
   try {
