@@ -52,11 +52,11 @@ export function ExploreTab({
   const basketTotalWithFee = basketServicesTotal + BOOKING_FEE;
 
   return (
-    <div className="h-full flex flex-col relative bg-surface-50">
-      <div className="safe-top" />
+    <div className="h-full flex flex-col bg-surface-50 overflow-hidden">
+      <div className="safe-top bg-surface-50" />
 
-      {/* ─── HEADER ─── */}
-      <header className="flex-shrink-0 bg-surface-50/95 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-20">
+      {/* ─── FIXED HEADER (Never scrolls) ─── */}
+      <header className="flex-shrink-0 bg-surface-50/95 backdrop-blur-md border-b border-slate-200/60 z-20">
         <div className="px-4 sm:px-5 pt-3.5 pb-2 flex items-center justify-between">
           <div>
             <h1 className="text-[20px] font-black tracking-tight text-slate-900 leading-none">Services & Catalogue</h1>

@@ -85,11 +85,11 @@ export function HomeTab({ data, onNavigate, onSwitchToExplore }: HomeTabProps) {
   }, [data.banners.length]);
 
   return (
-    <div className="h-full overflow-y-auto no-scrollbar bg-surface-50">
-      <div className="safe-top" />
+    <div className="h-full flex flex-col bg-surface-50 overflow-hidden">
+      <div className="safe-top bg-surface-50" />
 
-      {/* ─── HEADER ─── */}
-      <header className="sticky top-0 z-20 bg-surface-50/95 backdrop-blur-md px-5 pt-3.5 pb-2.5 flex items-center justify-between border-b border-slate-200/60">
+      {/* ─── FIXED HEADER (Never scrolls) ─── */}
+      <header className="flex-shrink-0 bg-surface-50/95 backdrop-blur-md px-5 pt-3.5 pb-2.5 flex items-center justify-between border-b border-slate-200/60 z-20">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-b from-amber-400 to-amber-500 shadow-md shadow-amber-400/20">
             <span className="text-[18px] font-black text-slate-950">Q</span>
@@ -113,7 +113,8 @@ export function HomeTab({ data, onNavigate, onSwitchToExplore }: HomeTabProps) {
         </div>
       </header>
 
-      <div className="px-5 pb-28 space-y-6 pt-3">
+      {/* ─── SCROLLABLE BODY (Scrolls underneath fixed header) ─── */}
+      <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-36 space-y-6 pt-3">
         {/* ─── 5-SCENE DYNAMIC ROTATING HERO CARD ─── */}
         <div
           className="relative overflow-hidden rounded-[32px] p-6 sm:p-8 flex flex-col justify-between shadow-xl border border-slate-200/90 bg-white"

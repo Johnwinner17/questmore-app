@@ -90,11 +90,11 @@ export function ActivityTab({ currentUser }: { currentUser?: User | null }) {
   });
 
   return (
-    <div className="h-full overflow-y-auto no-scrollbar bg-surface-50">
-      <div className="safe-top" />
+    <div className="h-full flex flex-col bg-surface-50 overflow-hidden">
+      <div className="safe-top bg-surface-50" />
 
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-20 bg-surface-50/95 backdrop-blur-md border-b border-slate-200/60">
+      {/* ─── FIXED HEADER (Never scrolls) ─── */}
+      <header className="flex-shrink-0 bg-surface-50/95 backdrop-blur-md border-b border-slate-200/60 z-20">
         <div className="px-5 pt-4 pb-2 flex items-center justify-between">
           <div>
             <h1 className="text-[21px] font-black tracking-tight text-slate-900 leading-none">My Activity</h1>
@@ -132,7 +132,8 @@ export function ActivityTab({ currentUser }: { currentUser?: User | null }) {
         </div>
       </header>
 
-      <div className="px-5 py-4 pb-40 space-y-3.5">
+      {/* ─── SCROLLABLE BODY (Scrolls underneath fixed header) ─── */}
+      <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-4 pb-40 space-y-3.5">
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => (

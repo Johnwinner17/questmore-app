@@ -277,10 +277,10 @@ export function AppShell({ initialData }: {
 
           {isOnTab && <WhatsAppButton />}
 
-          {/* ─── FLOATING PREMIUM NAVIGATION BAR (Truly Floating, ZERO blank bottom white space) ─── */}
+          {/* ─── DOCKED PREMIUM NAVIGATION BAR (Extends 100% to screen bottom edge with zero gap) ─── */}
           {isOnTab && (
-            <nav className="fixed bottom-0 left-0 right-0 z-30 px-3.5 pb-[max(env(safe-area-inset-bottom,0px),10px)] pt-0 pointer-events-none">
-              <div className="max-w-md mx-auto floating-nav-card rounded-[26px] p-1.5 flex items-center justify-around pointer-events-auto shadow-2xl">
+            <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-800/80 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
+              <div className="max-w-md mx-auto px-4 pt-2 pb-[max(env(safe-area-inset-bottom,0px),8px)] flex items-center justify-around">
                 {(["home", "explore", "activity", "account"] as Tab[]).map((tab) => {
                   const isActive = activeTab === tab && isOnTab;
                   return (
@@ -288,10 +288,10 @@ export function AppShell({ initialData }: {
                       key={tab}
                       onClick={() => switchTab(tab)}
                       className={clsx(
-                        "flex flex-col items-center justify-center transition-all duration-300 relative",
+                        "flex flex-col items-center justify-center transition-all duration-200 relative py-1.5 px-4 rounded-2xl",
                         isActive
-                          ? "bg-[#0B132B] text-white px-5 py-2 rounded-[20px] shadow-md"
-                          : "px-3 py-2 text-slate-500 hover:text-slate-950"
+                          ? "bg-[#0B132B] text-white shadow-sm"
+                          : "text-slate-500 hover:text-slate-900 active:scale-95"
                       )}
                     >
                       <TabIcon tab={tab} active={isActive} />

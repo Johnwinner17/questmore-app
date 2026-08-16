@@ -133,16 +133,19 @@ export function AccountTab({
   ];
 
   return (
-    <div className="h-full overflow-y-auto no-scrollbar bg-surface-50">
-      <div className="safe-top" />
-      <header className="sticky top-0 z-20 bg-surface-50/95 backdrop-blur-md border-b border-slate-200/60">
+    <div className="h-full flex flex-col bg-surface-50 overflow-hidden">
+      <div className="safe-top bg-surface-50" />
+
+      {/* ─── FIXED HEADER (Never scrolls) ─── */}
+      <header className="flex-shrink-0 bg-surface-50/95 backdrop-blur-md border-b border-slate-200/60 z-20">
         <div className="px-5 pt-4 pb-2.5">
           <h1 className="text-[22px] font-black tracking-tight text-slate-900 leading-none">Account & Settings</h1>
           <p className="text-[11.5px] font-medium text-slate-400 mt-1">Manage client profile, preferences & legal policies</p>
         </div>
       </header>
 
-      <div className="px-5 pb-44 space-y-5 mt-4">
+      {/* ─── SCROLLABLE BODY (Scrolls underneath fixed header) ─── */}
+      <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-44 space-y-5 pt-4">
         {/* Profile Card */}
         <div
           className="rounded-[28px] p-5 relative overflow-hidden shadow-xl text-white border border-slate-800"

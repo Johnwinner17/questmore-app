@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 
 type Platform = "ios" | "android" | "desktop" | "unknown";
-type Phase = "idle" | "banner" | "ios-guide" | "installing" | "success";
+type Phase = "idle" | "banner" | "ios-guide" | "android-guide" | "already-installed" | "installing" | "success";
 
 function detectPlatform(): Platform {
   if (typeof window === "undefined") return "unknown";
@@ -18,7 +18,8 @@ function isInStandaloneMode(): boolean {
   if (typeof window === "undefined") return false;
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
-    (window.navigator as any).standalone === true
+    (window.navigator as any).standalone === true ||
+    document.referrer.includes("android-app://")
   );
 }
 
@@ -49,26 +50,19 @@ export function PWAInstallPrompt() {
     const plt = detectPlatform();
     setPlatform(plt);
 
-    // If already launched as a standalone PWA on Home Screen, do nothing
-    if (isInStandaloneMode() || isDismissedRecently()) return;
-
     // Register service worker
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
 
-    // On iOS Safari, show prompt after 4 seconds
-    if (plt === "ios") {
-      const timer = setTimeout(() => setPhase("banner"), 4000);
-      return () => clearTimeout(timer);
-    }
-
-    // Android / Desktop Chrome: capture beforeinstallprompt
+    // Capture beforeinstallprompt event (Android / Chrome)
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      const timer = setTimeout(() => setPhase("banner"), 3500);
-      return () => clearTimeout(timer);
+      // Auto-show banner only if not standalone and not recently dismissed
+      if (!isInStandaloneMode() && !isDismissedRecently()) {
+        setTimeout(() => setPhase("banner"), 3500);
+      }
     };
 
     const installedHandler = () => {
@@ -76,13 +70,23 @@ export function PWAInstallPrompt() {
       setTimeout(() => setPhase("idle"), 3500);
     };
 
+    // ALWAYS listen to manual trigger event (from Account page or other buttons)
     const manualOpenHandler = () => {
       const currentPlt = detectPlatform();
       setPlatform(currentPlt);
+
+      if (isInStandaloneMode()) {
+        setPhase("already-installed");
+        return;
+      }
+
       if (currentPlt === "ios") {
         setPhase("ios-guide");
-      } else {
+      } else if (deferredPrompt) {
         setPhase("banner");
+      } else {
+        // Fallback guide if browser does not support or already fired beforeinstallprompt
+        setPhase("android-guide");
       }
     };
 
@@ -90,12 +94,23 @@ export function PWAInstallPrompt() {
     window.addEventListener("beforeinstallprompt", handler as any);
     window.addEventListener("appinstalled", installedHandler);
 
+    // Auto-show on iOS Safari after 4 seconds if not standalone & not dismissed
+    if (plt === "ios" && !isInStandaloneMode() && !isDismissedRecently()) {
+      const timer = setTimeout(() => setPhase("banner"), 4000);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener("open-pwa-install", manualOpenHandler);
+        window.removeEventListener("beforeinstallprompt", handler as any);
+        window.removeEventListener("appinstalled", installedHandler);
+      };
+    }
+
     return () => {
       window.removeEventListener("open-pwa-install", manualOpenHandler);
       window.removeEventListener("beforeinstallprompt", handler as any);
       window.removeEventListener("appinstalled", installedHandler);
     };
-  }, []);
+  }, [deferredPrompt]);
 
   const handleInstall = async () => {
     if (platform === "ios") {
@@ -103,28 +118,31 @@ export function PWAInstallPrompt() {
       return;
     }
 
-    if (!deferredPrompt) return;
-    setPhase("installing");
+    if (deferredPrompt) {
+      setPhase("installing");
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        setDeferredPrompt(null);
 
-    try {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      setDeferredPrompt(null);
-
-      if (outcome === "accepted") {
-        setPhase("success");
-        setTimeout(() => setPhase("idle"), 3500);
-      } else {
-        dismiss(false);
+        if (outcome === "accepted") {
+          setPhase("success");
+          setTimeout(() => setPhase("idle"), 3500);
+        } else {
+          dismiss(false);
+        }
+      } catch {
+        setPhase("idle");
       }
-    } catch {
-      setPhase("idle");
+    } else {
+      // If deferredPrompt is missing, show direct browser instructions
+      setPhase("android-guide");
     }
   };
 
   if (phase === "idle") return null;
 
-  // ── Success Toast (Android / Chrome native install only) ───────────────────
+  // ── Success Toast ─────────────────────────────────────────────────────────
   if (phase === "success") {
     return (
       <div
@@ -140,7 +158,33 @@ export function PWAInstallPrompt() {
     );
   }
 
-  // ── iOS Full Visual Guide (Crystal Clear for Apple Safari) ─────────────────
+  // ── Already Installed Modal ───────────────────────────────────────────────
+  if (phase === "already-installed") {
+    return (
+      <>
+        <div className="fixed inset-0 z-[150] bg-black/70 backdrop-blur-sm" onClick={() => dismiss(false)} />
+        <div className="fixed bottom-0 left-0 right-0 z-[151] p-4 sm:p-6" style={{ animation: "slideUpFade 0.35s ease-out both" }}>
+          <div className="max-w-sm mx-auto rounded-[28px] overflow-hidden shadow-2xl bg-slate-900 border border-emerald-500/30 text-white p-6 text-center">
+            <div className="flex h-14 w-14 mx-auto items-center justify-center rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-[28px] mb-3">
+              ✅
+            </div>
+            <h3 className="text-[17px] font-black text-white">App is Active & Installed</h3>
+            <p className="text-[12.5px] text-slate-300 font-medium mt-2 leading-relaxed">
+              You are running QuestMore directly from your Home Screen with full offline support and fast performance.
+            </p>
+            <button
+              onClick={() => dismiss(false)}
+              className="mt-5 w-full py-3 rounded-2xl text-[13.5px] font-black bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-colors shadow-md"
+            >
+              Great, Continue
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ── iOS Full Visual Walkthrough ───────────────────────────────────────────
   if (phase === "ios-guide") {
     return (
       <>
@@ -153,11 +197,9 @@ export function PWAInstallPrompt() {
             className="max-w-sm mx-auto rounded-[28px] overflow-hidden shadow-2xl"
             style={{ background: "linear-gradient(160deg, #0E1F36 0%, #07111F 100%)", border: "1px solid rgba(255,255,255,0.12)" }}
           >
-            {/* Top gradient bar */}
             <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, #F59E0B 0%, #F97316 50%, #8B5CF6 100%)" }} />
 
             <div className="p-5 pb-6">
-              {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div
@@ -183,7 +225,6 @@ export function PWAInstallPrompt() {
                 </button>
               </div>
 
-              {/* Instructions Box */}
               <div className="rounded-2xl p-4 mb-4 space-y-3.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
                 {/* Step 1 */}
                 <div className="flex items-start gap-3">
@@ -231,7 +272,6 @@ export function PWAInstallPrompt() {
                 </div>
               </div>
 
-              {/* Bottom pointer cue */}
               <div className="rounded-xl bg-amber-400/10 border border-amber-400/30 p-3 mb-4 text-center animate-pulse">
                 <p className="text-[12px] font-black text-amber-300 flex items-center justify-center gap-1.5">
                   <span>⬇️</span> Tap the Share button at bottom of screen <span>⬇️</span>
@@ -244,6 +284,91 @@ export function PWAInstallPrompt() {
                 style={{ background: "linear-gradient(135deg, #F59E0B 0%, #F97316 100%)" }}
               >
                 Got It — I&apos;ll Tap Share Now
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ── Android / Chrome Manual Guide (Fallback if browser doesn't prompt) ────
+  if (phase === "android-guide") {
+    return (
+      <>
+        <div className="fixed inset-0 z-[150] bg-black/75 backdrop-blur-md" onClick={() => dismiss()} />
+        <div
+          className="fixed bottom-0 left-0 right-0 z-[151] p-4 sm:p-6"
+          style={{ animation: "slideUpFade 0.35s ease-out both" }}
+        >
+          <div
+            className="max-w-sm mx-auto rounded-[28px] overflow-hidden shadow-2xl"
+            style={{ background: "linear-gradient(160deg, #0E1F36 0%, #07111F 100%)", border: "1px solid rgba(255,255,255,0.12)" }}
+          >
+            <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, #F59E0B 0%, #F97316 50%, #8B5CF6 100%)" }} />
+
+            <div className="p-5 pb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-11 w-11 items-center justify-center rounded-2xl text-[22px] font-black text-slate-950 shadow-md"
+                    style={{ background: "linear-gradient(135deg, #F59E0B, #F97316)" }}
+                  >
+                    Q
+                  </div>
+                  <div>
+                    <span className="text-[9.5px] font-black text-amber-400 uppercase tracking-widest">
+                      Android / Chrome Setup
+                    </span>
+                    <h3 className="text-[16.5px] font-black text-white leading-tight">
+                      Install on Your Phone
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  onClick={() => dismiss()}
+                  className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors text-lg"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="rounded-2xl p-4 mb-4 space-y-3.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-400 text-slate-950 font-black text-[12px] mt-0.5">
+                    1
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-bold text-white leading-tight">
+                      Tap the <strong className="text-amber-400">3 Dots (⋮)</strong> menu
+                    </p>
+                    <p className="text-[11.5px] text-slate-400 mt-0.5">
+                      Found in the top-right corner of Chrome / your browser.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-400 text-slate-950 font-black text-[12px] mt-0.5">
+                    2
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-bold text-white leading-tight">
+                      Tap <strong className="text-amber-400">&apos;Install app&apos;</strong> or <strong className="text-amber-400">&apos;Add to Home screen&apos;</strong>
+                    </p>
+                    <p className="text-[11.5px] text-slate-400 mt-0.5">
+                      QuestMore will be installed into your phone app drawer!
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => dismiss()}
+                className="w-full py-3 rounded-2xl text-[13.5px] font-black text-slate-950 shadow-lg transition-all active:scale-[0.97]"
+                style={{ background: "linear-gradient(135deg, #F59E0B 0%, #F97316 100%)" }}
+              >
+                Got It
               </button>
             </div>
           </div>
