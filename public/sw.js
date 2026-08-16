@@ -8,7 +8,7 @@
  *  - OFFLINE FALLBACK: Branded /offline.html served when all else fails
  */
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE  = `questmore-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `questmore-dynamic-${CACHE_VERSION}`;
 const OFFLINE_URL   = '/offline.html';
@@ -19,6 +19,7 @@ const PRECACHE_ASSETS = [
   '/offline.html',
   '/manifest.json',
   '/icon-192.png',
+  '/icon-384.png',
   '/icon-512.png',
   '/apple-touch-icon.png',
   '/hero_engineering.jpg',
