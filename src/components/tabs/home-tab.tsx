@@ -15,14 +15,71 @@ interface HomeTabProps {
   onSwitchToExplore: () => void;
 }
 
-export function HomeTab({ data, onNavigate, onSwitchToExplore }: HomeTabProps) {
-  const [activeBanner, setActiveBanner] = useState(0);
-  const [heroImgFailed, setHeroImgFailed] = useState(false);
+const HERO_SLIDES = [
+  {
+    id: 1,
+    image: "/hero_engineering.jpg",
+    badgeIcon: "🛡️",
+    badgeText: "Verified Engineering Platform",
+    headline: "Civil, Structural & Construction Engineering",
+    description: "Licensed structural engineers, foundation specialists & turn-key site supervision with QA warranties.",
+    alt: "Civil & Structural Engineering Site",
+  },
+  {
+    id: 2,
+    image: "/hero_electrical.jpg",
+    badgeIcon: "⚡",
+    badgeText: "Certified Solar & Power Systems",
+    headline: "Solar Inverters & Electrical Power Engineering",
+    description: "High-voltage wiring, clean solar power generation, backup battery banks & 24/7 industrial electrical setups.",
+    alt: "Electrical Engineers & Solar Power Installation",
+  },
+  {
+    id: 3,
+    image: "/hero_plumbing.jpg",
+    badgeIcon: "🔧",
+    badgeText: "Certified Industrial Plumbers",
+    headline: "Plumbing, Piping & Water Treatment Systems",
+    description: "High-pressure copper & PVC piping, automated booster pumps, borehole filtration & sanitary engineering.",
+    alt: "Industrial Plumbing & High-Pressure Water Piping",
+  },
+  {
+    id: 4,
+    image: "/hero_architecture.jpg",
+    badgeIcon: "🏗️",
+    badgeText: "Architectural Design & Build",
+    headline: "Architectural Design & Modern Building Works",
+    description: "Luxury residential towers, commercial steel and glass facades, structural blueprints & turn-key execution.",
+    alt: "Modern Architectural Construction Site",
+  },
+  {
+    id: 5,
+    image: "/hero_mechanical.jpg",
+    badgeIcon: "⚙️",
+    badgeText: "Heavy Machinery & Facility Techs",
+    headline: "Industrial HVAC, Chillers & Generator Plants",
+    description: "Central air conditioning plants, heavy diesel generators, industrial mechanical servicing & warranty coverage.",
+    alt: "Mechanical HVAC Engineers & Generator Power Plants",
+  },
+];
 
+export function HomeTab({ data, onNavigate, onSwitchToExplore }: HomeTabProps) {
+  const [activeHero, setActiveHero] = useState(0);
+  const [activeBanner, setActiveBanner] = useState(0);
+
+  // Rotate hero scenes every 4.5 seconds
+  useEffect(() => {
+    const heroInterval = setInterval(() => {
+      setActiveHero((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 4500);
+    return () => clearInterval(heroInterval);
+  }, []);
+
+  // Rotate secondary banners
   useEffect(() => {
     if (data.banners.length <= 1) return;
     const interval = setInterval(() => {
-      setActiveBanner(prev => (prev + 1) % data.banners.length);
+      setActiveBanner((prev) => (prev + 1) % data.banners.length);
     }, 4500);
     return () => clearInterval(interval);
   }, [data.banners.length]);
@@ -57,51 +114,80 @@ export function HomeTab({ data, onNavigate, onSwitchToExplore }: HomeTabProps) {
       </header>
 
       <div className="px-5 pb-28 space-y-6 pt-3">
-        {/* ─── IMMERSIVE PREMIUM HERO CARD ─── */}
+        {/* ─── 5-SCENE DYNAMIC ROTATING HERO CARD ─── */}
         <div
           className="relative overflow-hidden rounded-[32px] p-6 sm:p-8 flex flex-col justify-between shadow-xl border border-slate-200/90 bg-white"
           style={{
-            minHeight: "380px",
+            minHeight: "390px",
           }}
         >
-          {/* Integrated Engineering Scene Background (Upper & Right Half) */}
+          {/* Integrated Engineering Scene Backgrounds (5 Cross-Fading Scenes) */}
           <div className="absolute right-0 top-0 bottom-0 w-[72%] sm:w-[60%] pointer-events-none overflow-hidden select-none">
-            <img
-              src="/hero_engineering.jpg"
-              alt="Civil & Structural Engineering Site"
-              loading="eager"
-              fetchPriority="high"
-              decoding="async"
-              className="h-full w-full object-cover object-center sm:object-right transition-transform duration-700 ease-out"
-              style={{
-                maskImage: "linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 12%, rgba(0,0,0,0.7) 40%, rgba(0,0,0,1) 100%)",
-                WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 12%, rgba(0,0,0,0.7) 40%, rgba(0,0,0,1) 100%)",
-              }}
-            />
+            {HERO_SLIDES.map((slide, i) => (
+              <div
+                key={slide.id}
+                className={clsx(
+                  "absolute inset-0 transition-all duration-1000 ease-in-out",
+                  i === activeHero ? "opacity-100 scale-100" : "opacity-0 scale-105 pointer-events-none"
+                )}
+              >
+                <img
+                  src={slide.image}
+                  alt={slide.alt}
+                  loading={i === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                  className="h-full w-full object-cover object-center sm:object-right"
+                  style={{
+                    maskImage: "linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 12%, rgba(0,0,0,0.7) 40%, rgba(0,0,0,1) 100%)",
+                    WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 12%, rgba(0,0,0,0.7) 40%, rgba(0,0,0,1) 100%)",
+                  }}
+                />
+              </div>
+            ))}
             {/* Smooth gradient overlay covering the left text area & bottom */}
             <div
               className="absolute inset-0"
               style={{
-                background: "linear-gradient(to right, #FFFFFF 0%, rgba(255,255,255,0.94) 22%, rgba(255,255,255,0.4) 48%, rgba(255,255,255,0) 78%), linear-gradient(to top, #FFFFFF 0%, rgba(255,255,255,0.8) 10%, rgba(255,255,255,0) 30%)",
+                background: "linear-gradient(to right, #FFFFFF 0%, rgba(255,255,255,0.95) 22%, rgba(255,255,255,0.45) 48%, rgba(255,255,255,0) 78%), linear-gradient(to top, #FFFFFF 0%, rgba(255,255,255,0.85) 10%, rgba(255,255,255,0) 30%)",
               }}
             />
           </div>
 
-          {/* Left Hero Content */}
+          {/* Left Hero Content with Dynamic Transitions */}
           <div className="relative z-10">
-            {/* Pill Badge */}
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900 text-white mb-4 shadow-sm border border-slate-800">
-              <span className="text-amber-400 font-black text-xs">🛡️</span>
-              <span className="text-[11px] font-extrabold tracking-tight">Verified Engineering Platform</span>
+            {/* Top Indicator Row (Pill Badge + 5 Progress Dots) */}
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900 text-white shadow-sm border border-slate-800 transition-all duration-300">
+                <span className="text-amber-400 font-black text-xs">{HERO_SLIDES[activeHero].badgeIcon}</span>
+                <span className="text-[11px] font-extrabold tracking-tight">{HERO_SLIDES[activeHero].badgeText}</span>
+              </div>
+
+              {/* 5 Slide Indicators / Tap to Change */}
+              <div className="flex items-center gap-1.5 bg-slate-900/10 backdrop-blur-md px-2.5 py-1.5 rounded-full border border-slate-200/80">
+                {HERO_SLIDES.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveHero(idx)}
+                    aria-label={`Slide ${idx + 1}`}
+                    className={clsx(
+                      "h-1.5 rounded-full transition-all duration-500",
+                      idx === activeHero
+                        ? "w-6 bg-amber-500 shadow-xs"
+                        : "w-1.5 bg-slate-300 hover:bg-slate-400"
+                    )}
+                  />
+                ))}
+              </div>
             </div>
 
             {/* Headline & Description */}
-            <div className="max-w-[78%] sm:max-w-[56%]">
-              <h2 className="text-[23px] sm:text-[27px] font-black text-slate-950 leading-[1.18] tracking-tight">
-                Engineering & Technical Services in Nigeria
+            <div className="max-w-[78%] sm:max-w-[56%] min-h-[140px] flex flex-col justify-center">
+              <h2 className="text-[23px] sm:text-[27px] font-black text-slate-950 leading-[1.18] tracking-tight transition-all duration-500">
+                {HERO_SLIDES[activeHero].headline}
               </h2>
-              <p className="mt-3 text-[13px] text-slate-600 leading-relaxed font-medium">
-                Connect with verified artisans, licensed technicians, and construction engineers with QA warranties.
+              <p className="mt-3 text-[13px] text-slate-600 leading-relaxed font-medium transition-all duration-500">
+                {HERO_SLIDES[activeHero].description}
               </p>
             </div>
           </div>
