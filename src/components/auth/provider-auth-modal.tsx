@@ -119,10 +119,10 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-white rounded-[32px] w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-scale-up border border-slate-100">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white rounded-t-[32px] sm:rounded-[32px] w-full max-w-lg h-[92dvh] sm:h-auto sm:max-h-[88vh] flex flex-col overflow-hidden shadow-2xl animate-scale-up border border-slate-100">
         {/* Header */}
-        <div className="px-6 py-4.5 border-b border-slate-800 flex items-center justify-between bg-slate-950 text-white">
+        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950 text-white shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white text-[22px] shadow-md shadow-blue-600/30">
               👷
@@ -142,7 +142,7 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
         </div>
 
         {/* Tab switch */}
-        <div className="flex border-b border-slate-100 bg-slate-50 p-2 gap-2">
+        <div className="flex border-b border-slate-100 bg-slate-50 p-2 gap-2 shrink-0">
           <button
             type="button"
             onClick={() => { setTab("register"); setError(""); }}
@@ -167,8 +167,8 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
           </button>
         </div>
 
-        {/* Form Body */}
-        <div className="flex-1 overflow-y-auto p-6 no-scrollbar">
+        {/* Form Body with Smooth Scrolling & Bottom Margin */}
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 no-scrollbar pb-16 sm:pb-8 overscroll-contain">
           {error && (
             <div className="mb-4 rounded-2xl bg-red-50 border border-red-200 p-3.5 text-[12.5px] font-bold text-red-700">
               ⚠️ {error}
@@ -186,7 +186,7 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
           )}
 
           {tab === "register" ? (
-            <form onSubmit={handleRegister} className="space-y-4">
+            <form onSubmit={handleRegister} className="space-y-4 pb-8">
               <div className="bg-blue-50/80 border border-blue-200 rounded-2xl p-3.5 flex items-start gap-3">
                 <span className="text-[20px]">ℹ️</span>
                 <p className="text-[12px] text-blue-950 font-medium leading-relaxed">
@@ -208,7 +208,7 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
                       value={formData.fullName}
                       onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                       placeholder="e.g. John Obi"
-                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] text-slate-900 outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[12.5px] text-slate-900 outline-none focus:border-blue-500 bg-white"
                     />
                   </div>
                   <div>
@@ -219,7 +219,7 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       placeholder="e.g. +234 802 123 4567"
-                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] text-slate-900 outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[12.5px] text-slate-900 outline-none focus:border-blue-500 bg-white"
                     />
                   </div>
                 </div>
@@ -233,7 +233,7 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="john.obi@gmail.com"
-                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] text-slate-900 outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[12.5px] text-slate-900 outline-none focus:border-blue-500 bg-white"
                     />
                   </div>
                   <div>
@@ -244,7 +244,7 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       placeholder="••••••••"
-                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] text-slate-900 outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[12.5px] text-slate-900 outline-none focus:border-blue-500 bg-white"
                     />
                   </div>
                 </div>
@@ -261,7 +261,7 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
                     <select
                       value={formData.professionId}
                       onChange={(e) => handleProfessionChange(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] text-slate-900 outline-none focus:border-blue-500 bg-white font-medium"
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[12.5px] text-slate-900 outline-none focus:border-blue-500 bg-white font-medium"
                     >
                       {professions.map((p) => (
                         <option key={p.id} value={p.id}>
@@ -275,7 +275,7 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
                     <select
                       value={formData.experienceYears}
                       onChange={(e) => setFormData({ ...formData, experienceYears: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] text-slate-900 outline-none focus:border-blue-500 bg-white"
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[12.5px] text-slate-900 outline-none focus:border-blue-500 bg-white"
                     >
                       <option value="1">1 - 2 Years</option>
                       <option value="3">3 - 5 Years</option>
@@ -297,7 +297,7 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
                     <select
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] text-slate-900 outline-none focus:border-blue-500 bg-white"
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[12.5px] text-slate-900 outline-none focus:border-blue-500 bg-white"
                     >
                       <option value="Abuja (FCT)">Abuja (FCT)</option>
                       <option value="Lagos">Lagos</option>
@@ -316,7 +316,7 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       placeholder="e.g. Plot 12, Gwarinpa"
-                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] text-slate-900 outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[12.5px] text-slate-900 outline-none focus:border-blue-500 bg-white"
                     />
                   </div>
                 </div>
@@ -333,7 +333,7 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
                     value={formData.qualifications}
                     onChange={(e) => setFormData({ ...formData, qualifications: e.target.value })}
                     placeholder="e.g. Trade Test 1, COREN Reg, Solar Certified"
-                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] text-slate-900 outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[12.5px] text-slate-900 outline-none focus:border-blue-500 bg-white"
                   />
                 </div>
                 <div>
@@ -345,64 +345,71 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
                     value={formData.bio}
                     onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                     placeholder="Specialist in commercial piping, pump installation, fault troubleshooting..."
-                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] text-slate-900 outline-none focus:border-blue-500 resize-none"
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[12.5px] text-slate-900 outline-none focus:border-blue-500 resize-none bg-white"
                   />
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-2xl py-3.5 text-[14px] font-black text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
-              >
-                {loading ? (
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    <span>Submitting Application...</span>
-                  </>
-                ) : (
-                  <span>Submit Provider Application</span>
-                )}
-              </button>
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-2xl py-3.5 text-[14px] font-black text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      <span>Submitting Application...</span>
+                    </>
+                  ) : (
+                    <span>Submit Provider Application</span>
+                  )}
+                </button>
+              </div>
             </form>
           ) : (
-            /* Sign In Tab */
-            <form onSubmit={handleLogin} className="space-y-4 py-3">
+            /* Sign In Tab (Clean without hardcoded demo credentials) */
+            <form onSubmit={handleLogin} className="space-y-4 py-3 pb-8">
               <div>
-                <label className="block text-[12px] font-extrabold text-slate-700 mb-1">Provider Email</label>
+                <label className="block text-[12px] font-extrabold text-slate-700 mb-1">Provider Email *</label>
                 <input
                   type="email"
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="john.obi@questmore.com"
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[13px] text-slate-900 outline-none focus:border-blue-500"
+                  placeholder="your.email@example.com"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[13px] text-slate-900 outline-none focus:border-blue-500 bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-[12px] font-extrabold text-slate-700 mb-1">Password</label>
+                <label className="block text-[12px] font-extrabold text-slate-700 mb-1">Password *</label>
                 <input
                   type="password"
                   required
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[13px] text-slate-900 outline-none focus:border-blue-500"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[13px] text-slate-900 outline-none focus:border-blue-500 bg-white"
                 />
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/80 text-[12px] text-blue-950 font-medium">
-                💡 <span className="font-bold">Demo Verified Account:</span> Sign in with <span className="font-mono font-bold text-blue-700">john.obi@questmore.com</span> to test assigned jobs and completions.
+              <div className="pt-3">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-2xl py-3.5 text-[14px] font-black text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      <span>Signing in...</span>
+                    </>
+                  ) : (
+                    <span>Sign In to Provider Dashboard</span>
+                  )}
+                </button>
               </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-2xl py-3.5 text-[14px] font-black text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
-              >
-                {loading ? "Signing in..." : "Sign In to Provider Dashboard"}
-              </button>
             </form>
           )}
         </div>

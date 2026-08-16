@@ -103,11 +103,12 @@ export function ClientGoogleAuth({ onSuccess, onCancel }: ClientGoogleAuthProps)
         }
         setAuthenticatedUser(data.user);
 
-        // If phone number is not yet provided, prompt for phone to complete dispatch setup
-        if (!data.user.phone) {
-          setStep("extra_details");
-        } else {
+        // If existing user OR user already has phone -> DIRECTLY LOG IN into dashboard!
+        if (!data.isNew || data.user.phone) {
           onSuccess(data.user);
+        } else {
+          // Only brand new accounts without phone are prompted
+          setStep("extra_details");
         }
       } else {
         setErrorMsg(data.error || "Google authentication failed. Please try again.");
@@ -165,10 +166,12 @@ export function ClientGoogleAuth({ onSuccess, onCancel }: ClientGoogleAuthProps)
                 setAuthTokens(data.tokens.access, data.tokens.refresh);
               }
               setAuthenticatedUser(data.user);
-              if (!data.user.phone) {
-                setStep("extra_details");
-              } else {
+
+              // If existing user OR already has phone -> DIRECTLY LOG IN into dashboard!
+              if (!data.isNew || data.user.phone) {
                 onSuccess(data.user);
+              } else {
+                setStep("extra_details");
               }
             }
           } catch (e) {

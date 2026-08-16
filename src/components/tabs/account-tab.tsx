@@ -28,6 +28,7 @@ export function AccountTab({
   const [showGuaranteeModal, setShowGuaranteeModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   // Edit profile state
   const [editPhone, setEditPhone] = useState(currentUser?.phone || "");
@@ -201,7 +202,7 @@ export function AccountTab({
             </button>
             <button
               type="button"
-              onClick={onSignOut}
+              onClick={() => setShowSignOutConfirm(true)}
               className="flex-1 rounded-2xl py-2.5 text-[12px] font-bold bg-white/10 hover:bg-white/15 text-slate-200 border border-white/10 transition-colors"
             >
               Sign Out
@@ -575,6 +576,40 @@ export function AccountTab({
                 className="w-full rounded-2xl btn-pro-amber py-3 text-[13.5px] font-black"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: SIGN OUT CONFIRMATION ─── */}
+      {showSignOutConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-[28px] w-full max-w-sm overflow-hidden shadow-2xl animate-scale-up border border-slate-100 p-6 text-center">
+            <div className="h-14 w-14 rounded-2xl bg-amber-100 border border-amber-200 flex items-center justify-center text-[28px] mx-auto mb-3">
+              🚪
+            </div>
+            <h3 className="text-[17px] font-black text-slate-900">Sign Out of QuestMore?</h3>
+            <p className="text-[12.5px] text-slate-500 font-medium mt-1.5 leading-relaxed">
+              Are you sure you want to sign out? You can sign back in anytime with your Google account.
+            </p>
+            <div className="mt-5 flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowSignOutConfirm(false)}
+                className="flex-1 py-3 rounded-2xl text-[13px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSignOutConfirm(false);
+                  if (onSignOut) onSignOut();
+                }}
+                className="flex-1 py-3 rounded-2xl text-[13px] font-black text-white bg-red-600 hover:bg-red-700 transition-colors shadow-md shadow-red-600/20"
+              >
+                Yes, Sign Out
               </button>
             </div>
           </div>

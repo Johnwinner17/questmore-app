@@ -18,6 +18,7 @@ export function ProviderDashboard({ user, onSignOut, onSwitchToClient }: Provide
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [toast, setToast] = useState("");
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   const isVerified = user.verificationStatus === "verified";
 
@@ -120,7 +121,7 @@ export function ProviderDashboard({ user, onSignOut, onSwitchToClient }: Provide
           </button>
           <button
             type="button"
-            onClick={onSignOut}
+            onClick={() => setShowSignOutConfirm(true)}
             className="px-3.5 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-[12px] font-bold text-red-400 hover:bg-red-500/20 transition-colors"
           >
             Sign Out
@@ -386,6 +387,40 @@ export function ProviderDashboard({ user, onSignOut, onSwitchToClient }: Provide
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl text-[13px] font-black shadow-2xl border border-slate-700">
           {toast}
+        </div>
+      )}
+
+      {/* ─── MODAL: SIGN OUT CONFIRMATION ─── */}
+      {showSignOutConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 rounded-[28px] w-full max-w-sm overflow-hidden shadow-2xl animate-scale-up border border-slate-800 p-6 text-center text-white">
+            <div className="h-14 w-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[28px] mx-auto mb-3">
+              🚪
+            </div>
+            <h3 className="text-[17px] font-black text-white">Sign Out of Provider Portal?</h3>
+            <p className="text-[12.5px] text-slate-400 font-medium mt-1.5 leading-relaxed">
+              Are you sure you want to sign out? You can sign back in with your provider email and password.
+            </p>
+            <div className="mt-5 flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowSignOutConfirm(false)}
+                className="flex-1 py-3 rounded-2xl text-[13px] font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSignOutConfirm(false);
+                  onSignOut();
+                }}
+                className="flex-1 py-3 rounded-2xl text-[13px] font-black text-white bg-red-600 hover:bg-red-700 transition-colors shadow-md shadow-red-600/20"
+              >
+                Yes, Sign Out
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
