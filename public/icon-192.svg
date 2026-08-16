@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0E1F36"/>
+      <stop offset="100%" stop-color="#07111F"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="40%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background with rounded corners -->
+  <rect width="192" height="192" rx="40" fill="url(#bg)"/>
+
+  <!-- Subtle grid pattern -->
+  <line x1="64" y1="0" x2="64" y2="192" stroke="rgba(245,158,11,0.06)" stroke-width="1"/>
+  <line x1="128" y1="0" x2="128" y2="192" stroke="rgba(245,158,11,0.06)" stroke-width="1"/>
+  <line x1="0" y1="64" x2="192" y2="64" stroke="rgba(245,158,11,0.06)" stroke-width="1"/>
+  <line x1="0" y1="128" x2="192" y2="128" stroke="rgba(245,158,11,0.06)" stroke-width="1"/>
+
+  <!-- Outer circle ring -->
+  <circle cx="96" cy="96" r="60" fill="none" stroke="url(#gold)" stroke-width="3" stroke-opacity="0.3"/>
+
+  <!-- Q letter -->
+  <text
+    x="96" y="118"
+    font-family="system-ui, -apple-system, 'Helvetica Neue', sans-serif"
+    font-size="80"
+    font-weight="900"
+    fill="url(#gold)"
+    text-anchor="middle"
+    filter="url(#glow)"
+  >Q</text>
+
+  <!-- Q tail accent line -->
+  <line x1="118" y1="118" x2="138" y2="142" stroke="url(#gold)" stroke-width="8" stroke-linecap="round" filter="url(#glow)"/>
+</svg>

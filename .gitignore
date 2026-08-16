@@ -1,0 +1,12 @@
+node_modules
+.next
+.vercel
+*.exe
+*.zip
+*.log
+.env*.local
+.env
+scripts/
+build_output*.txt
+vercel_out.txt
+tsconfig.tsbuildinfo

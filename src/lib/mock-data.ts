@@ -1,0 +1,275 @@
+import type { Category, Service, Subcategory, Banner, Review, ProjectGalleryItem, FAQ, ServiceArea, ProviderProfession, User, ServiceRequest } from "./types";
+
+export const mockCategories: Category[] = [
+  {
+    id: 1,
+    name: "Construction",
+    slug: "construction",
+    description: "Building, renovation, and structural construction services",
+    icon: "building",
+    imageUrl: "https://images.pexels.com/photos/11321791/pexels-photo-11321791.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    sortOrder: 1,
+    active: true,
+  },
+  {
+    id: 2,
+    name: "Electrical",
+    slug: "electrical",
+    description: "Wiring, installations, solar power, and electrical systems",
+    icon: "zap",
+    imageUrl: "https://images.pexels.com/photos/27928762/pexels-photo-27928762.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    sortOrder: 2,
+    active: true,
+  },
+  {
+    id: 3,
+    name: "Plumbing",
+    slug: "plumbing",
+    description: "Water systems, pipe fitting, drainage, and sanitation",
+    icon: "droplets",
+    imageUrl: "https://images.pexels.com/photos/7859953/pexels-photo-7859953.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    sortOrder: 3,
+    active: true,
+  },
+  {
+    id: 4,
+    name: "Property & Interiors",
+    slug: "property",
+    description: "Architectural planning, painting, roofing, and interior finishings",
+    icon: "home",
+    imageUrl: "https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    sortOrder: 4,
+    active: true,
+  },
+];
+
+export const mockProfessions: ProviderProfession[] = [
+  { id: 1, name: "Plumber", slug: "plumber", description: "Water piping, leak repairs, bathroom fittings & drainage", icon: "🔧", sortOrder: 1, active: true },
+  { id: 2, name: "Electrician", slug: "electrician", description: "Conduit wiring, fault troubleshooting, distribution boards", icon: "⚡", sortOrder: 2, active: true },
+  { id: 3, name: "Painter", slug: "painter", description: "Interior & exterior wall painting, screeding & wallpaper", icon: "🎨", sortOrder: 3, active: true },
+  { id: 4, name: "Carpenter", slug: "carpenter", description: "Doors, kitchen cabinets, roofing timber & woodwork", icon: "🪚", sortOrder: 4, active: true },
+  { id: 5, name: "Mason", slug: "mason", description: "Bricklaying, plastering, interlocking & concrete work", icon: "🧱", sortOrder: 5, active: true },
+  { id: 6, name: "Welder", slug: "welder", description: "Metal fabrication, burglary proofing, gates & tanks", icon: "🔥", sortOrder: 6, active: true },
+  { id: 7, name: "Solar Engineer", slug: "solar-engineer", description: "Solar PV design, hybrid inverters & lithium batteries", icon: "☀️", sortOrder: 7, active: true },
+  { id: 8, name: "HVAC / AC Technician", slug: "hvac-technician", description: "Air conditioner servicing, installation & ducting", icon: "❄️", sortOrder: 8, active: true },
+  { id: 9, name: "Tiler", slug: "tiler", description: "Floor & wall ceramic, porcelain and granite tiling", icon: "🔲", sortOrder: 9, active: true },
+  { id: 10, name: "Roofer", slug: "roofer", description: "Stone-coated tiles, aluminium sheets & roof truss", icon: "🏠", sortOrder: 10, active: true },
+  { id: 11, name: "POP Installer", slug: "pop-installer", description: "POP ceiling designs, decorative moldings & lighting troughs", icon: "✨", sortOrder: 11, active: true },
+  { id: 12, name: "Interior Designer", slug: "interior-designer", description: "Space planning, lighting design & modern fit-outs", icon: "🛋️", sortOrder: 12, active: true },
+  { id: 13, name: "Civil Engineer", slug: "civil-engineer", description: "Site supervision, road design & drainage structures", icon: "📐", sortOrder: 13, active: true },
+  { id: 14, name: "Structural Engineer", slug: "structural-engineer", description: "Structural drawings, calculations & load audits", icon: "🏗️", sortOrder: 14, active: true },
+  { id: 15, name: "Quantity Surveyor", slug: "quantity-surveyor", description: "Bill of Quantities (BOQ), material estimation & costing", icon: "📊", sortOrder: 15, active: true },
+  { id: 16, name: "Architect", slug: "architect", description: "3D architectural modeling, blueprint drawings & approvals", icon: "🏛️", sortOrder: 16, active: true },
+  { id: 17, name: "Generator Technician", slug: "generator-technician", description: "Diesel & petrol generator maintenance & ATS panel wiring", icon: "⚙️", sortOrder: 17, active: true },
+  { id: 18, name: "CCTV / Security Installer", slug: "cctv-installer", description: "IP camera surveillance, electric fencing & smart access", icon: "📹", sortOrder: 18, active: true },
+  { id: 19, name: "Mechanical Engineer", slug: "mechanical-engineer", description: "Heavy machinery, piping networks & industrial HVAC", icon: "🛠️", sortOrder: 19, active: true },
+  { id: 20, name: "Electrical Engineer", slug: "electrical-engineer", description: "High voltage transformer installation & grid setups", icon: "🔌", sortOrder: 20, active: true },
+];
+
+export const mockBanners: Banner[] = [
+  {
+    id: 1,
+    title: "Solar Power Systems",
+    subtitle: "Clean, reliable energy solutions with 5-year warranty",
+    imageUrl: "https://images.pexels.com/photos/9875441/pexels-photo-9875441.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    active: true,
+    sortOrder: 1,
+  },
+  {
+    id: 2,
+    title: "Building Renovation",
+    subtitle: "Transform your residential or commercial space with expert engineers",
+    imageUrl: "https://images.pexels.com/photos/8961438/pexels-photo-8961438.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    active: true,
+    sortOrder: 2,
+  },
+  {
+    id: 3,
+    title: "Borehole & Water Systems",
+    subtitle: "Complete water solution from drilling to filtration",
+    imageUrl: "https://images.pexels.com/photos/7859953/pexels-photo-7859953.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    active: true,
+    sortOrder: 3,
+  },
+];
+
+export const mockServices: Service[] = [
+  {
+    id: 1,
+    name: "Residential Building Construction",
+    slug: "residential-building",
+    shortDescription: "Complete house construction from foundation laying to roof topping and finishings.",
+    fullDescription: "Our residential construction service covers architectural design, structural engineering, foundation work, block work, roofing, electrical, plumbing, and interior finishings. Every project is assigned a certified site engineer.",
+    categoryId: 1,
+    subcategoryId: 1,
+    imageUrl: "https://images.pexels.com/photos/11321791/pexels-photo-11321791.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    gallery: null,
+    price: null, // Negotiable
+    features: JSON.stringify(["COREN-registered structural engineers", "Complete bill of quantities (BOQ)", "Stage-by-stage quality inspections", "Turnkey completion guarantee"]),
+    estimatedPriceRange: "Custom BOQ Estimate",
+    pricingType: "quote",
+    featured: true,
+    active: true,
+    sortOrder: 1,
+  },
+  {
+    id: 2,
+    name: "Solar Panel & Inverter Installation",
+    slug: "solar-installation",
+    shortDescription: "Complete solar system design, panel mounting, and inverter setup.",
+    fullDescription: "Transition to 24/7 clean energy. We assess your energy load, design the optimal solar array, install high-efficiency panels, hybrid inverters, and lithium-ion battery banks with safety protection systems.",
+    categoryId: 2,
+    subcategoryId: 4,
+    imageUrl: "https://images.pexels.com/photos/9875441/pexels-photo-9875441.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    gallery: null,
+    price: 350000, // Fixed package starting price
+    features: JSON.stringify(["Tier-1 Mono PERC solar panels", "Lithium (LiFePO4) battery integration", "Surge protection & lightning arrester", "2-year free maintenance warranty"]),
+    estimatedPriceRange: "₦350,000 - ₦6,500,000+",
+    pricingType: "fixed",
+    featured: true,
+    active: true,
+    sortOrder: 2,
+  },
+  {
+    id: 3,
+    name: "Plumbing Installation & Pipe Fitting",
+    slug: "plumbing-installation",
+    shortDescription: "PPR/PEX pipe routing, sanitary fittings, water heater installation & pressure pumps.",
+    fullDescription: "High-grade plumbing installation for newly built houses or renovations. Includes bathroom fittings, kitchen water lines, pressure pumps, and water heater connection with leak-proof testing.",
+    categoryId: 3,
+    subcategoryId: 5,
+    imageUrl: "https://images.pexels.com/photos/7859953/pexels-photo-7859953.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    gallery: null,
+    price: 20000, // Fixed standard service price
+    features: JSON.stringify(["PPR heat-fused piping", "Water pressure balancing", "Leak detection & pressure testing", "Quality certified sanitary ware"]),
+    estimatedPriceRange: "₦20,000 Fixed Initial Fee",
+    pricingType: "fixed",
+    featured: true,
+    active: true,
+    sortOrder: 3,
+  },
+  {
+    id: 4,
+    name: "Complete Building Painting & Screeding",
+    slug: "building-painting",
+    shortDescription: "Interior and exterior premium painting with surface preparation and screeding.",
+    fullDescription: "Professional surface washing, crack filling, priming, and multi-coat application using weatherproof premium paints. Includes textured screeding and decorative accent walls.",
+    categoryId: 4,
+    subcategoryId: 8,
+    imageUrl: "https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    gallery: null,
+    price: 30000, // Fixed standard service price
+    features: JSON.stringify(["Dustless surface sanding & wall screeding", "Anti-fungal, washable premium paints", "Color consultation & 3D sample view", "Clean-up & zero paint stain guarantee"]),
+    estimatedPriceRange: "₦30,000 Standard Service",
+    pricingType: "fixed",
+    featured: true,
+    active: true,
+    sortOrder: 4,
+  },
+  {
+    id: 5,
+    name: "POP Ceiling Design & Installation",
+    slug: "pop-ceiling-design",
+    shortDescription: "Modern false ceilings, custom cove lighting troughs and decorative cornices.",
+    fullDescription: "Custom POP ceiling installations tailored to your room layout. Includes LED strip channels, recessed spotlight holes, and seamless joint finishing.",
+    categoryId: 4,
+    subcategoryId: 7,
+    imageUrl: "https://images.pexels.com/photos/8961438/pexels-photo-8961438.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    gallery: null,
+    price: null, // Negotiable
+    features: JSON.stringify(["Precision laser alignment", "Moisture-resistant plaster", "Concealed ambient LED troughs", "Fast 48-hour room installation"]),
+    estimatedPriceRange: "Contact / Negotiable",
+    pricingType: "quote",
+    featured: true,
+    active: true,
+    sortOrder: 5,
+  },
+  {
+    id: 6,
+    name: "Electrical Fault Troubleshooting & Wiring",
+    slug: "electrical-wiring",
+    shortDescription: "Diagnostic troubleshooting, breaker panel replacement and conduit wiring.",
+    fullDescription: "Certified electricians solve breaker trips, earthing faults, socket replacements, and full conduit rewiring with industrial safety compliance.",
+    categoryId: 2,
+    subcategoryId: 3,
+    imageUrl: "https://images.pexels.com/photos/27928762/pexels-photo-27928762.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    gallery: null,
+    price: 25000, // Fixed price
+    features: JSON.stringify(["Surge diagnostic testing", "Copper wire load calculation", "Schneider / Chint standard breakers", "Earthing earth resistance check"]),
+    estimatedPriceRange: "₦25,000 Diagnostic & Fix",
+    pricingType: "fixed",
+    featured: false,
+    active: true,
+    sortOrder: 6,
+  },
+];
+
+export const mockSubcategories: Subcategory[] = [
+  { id: 1, categoryId: 1, name: "Building & Civil", slug: "building-civil", description: "Residential, commercial, and structural civil works", icon: "building", imageUrl: null, sortOrder: 1, active: true },
+  { id: 2, categoryId: 1, name: "Renovation & Remodeling", slug: "renovation", description: "Structural repairs, extensions, and modern upgrades", icon: "wrench", imageUrl: null, sortOrder: 2, active: true },
+  { id: 3, categoryId: 2, name: "Building Electrical Wiring", slug: "electrical-wiring", description: "Conduit wiring, distribution boards, and fittings", icon: "zap", imageUrl: null, sortOrder: 1, active: true },
+  { id: 4, categoryId: 2, name: "Solar & Inverter Systems", slug: "solar-systems", description: "Off-grid, hybrid solar power generation setups", icon: "zap", imageUrl: null, sortOrder: 2, active: true },
+  { id: 5, categoryId: 3, name: "Piping & Drainage", slug: "piping-drainage", description: "PEX/PPR water supply and waste drainage lines", icon: "droplets", imageUrl: null, sortOrder: 1, active: true },
+  { id: 6, categoryId: 3, name: "Borehole & Water Treatment", slug: "borehole-water", description: "Well drilling, pumps, and water purification", icon: "droplets", imageUrl: null, sortOrder: 2, active: true },
+  { id: 7, categoryId: 4, name: "Roofing & Ceiling", slug: "roofing-ceiling", description: "Aluminium, stone-coated tiles, and POP ceilings", icon: "home", imageUrl: null, sortOrder: 1, active: true },
+  { id: 8, categoryId: 4, name: "Painting & Wall Finishes", slug: "painting-finishes", description: "Wall screeding, textured paint, and wallpapers", icon: "home", imageUrl: null, sortOrder: 2, active: true },
+];
+
+export const mockUsers: User[] = [
+  {
+    id: 1,
+    role: "admin",
+    fullName: "QuestMore Administrator",
+    email: "questdmore@gmail.com",
+    phone: "+2348156307091",
+    avatarUrl: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=300&w=300",
+    verificationStatus: "verified",
+    verified: true,
+  },
+];
+
+export const mockRequests: ServiceRequest[] = [];
+
+export const mockReviews: Review[] = [];
+
+export const mockGalleryItems: ProjectGalleryItem[] = [
+  {
+    id: 1,
+    serviceId: 1,
+    categoryId: 1,
+    title: "5-Bedroom Duplex Renovation",
+    description: "Full exterior remodeling, POP ceiling installation, and modern solar lighting setup.",
+    beforeImageUrl: "https://images.pexels.com/photos/8961438/pexels-photo-8961438.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    afterImageUrl: "https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    location: "Lokogama, Abuja",
+    featured: true,
+  },
+  {
+    id: 2,
+    serviceId: 2,
+    categoryId: 2,
+    title: "15kVA Commercial Solar Power System",
+    description: "Installation of 24 Mono PERC solar panels with 30kWh Lithium storage bank.",
+    beforeImageUrl: "https://images.pexels.com/photos/27928762/pexels-photo-27928762.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    afterImageUrl: "https://images.pexels.com/photos/9875441/pexels-photo-9875441.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    location: "Wuse 2, Abuja",
+    featured: true,
+  },
+];
+
+export const mockFaqs: FAQ[] = [
+  { id: 1, categoryId: 1, question: "How does QuestMore verify engineers and contractors?", answer: "All professionals undergo identity verification, certification checks, physical workplace inspections, and past project reviews before being approved for jobs.", sortOrder: 1, active: true },
+  { id: 2, categoryId: 2, question: "What is the ₦5,000 Booking Fee for?", answer: "The ₦5,000 Booking Fee covers job scoping, engineer dispatch verification, and unlocks direct secure communication between you and verified QuestMore engineering specialists. It is charged once per cart/request.", sortOrder: 2, active: true },
+  { id: 3, categoryId: 3, question: "How does pricing work for Negotiable services?", answer: "For services without a fixed price, you only pay the ₦5,000 booking fee initially. Once payment is verified, an engineering supervisor contacts you to review scope, inspect site requirements, and agree on the final project cost.", sortOrder: 3, active: true },
+  { id: 4, categoryId: 4, question: "Is there a warranty on completed engineering services?", answer: "Yes! All structural, solar, and installation services carry a QuestMore Quality Assurance Warranty ranging from 6 months to 5 years depending on service type.", sortOrder: 4, active: true },
+];
+
+export const mockAreas: ServiceArea[] = [
+  { id: 1, name: "Maitama", state: "Abuja (FCT)", active: true },
+  { id: 2, name: "Asokoro", state: "Abuja (FCT)", active: true },
+  { id: 3, name: "Gwarinpa", state: "Abuja (FCT)", active: true },
+  { id: 4, name: "Wuse 2", state: "Abuja (FCT)", active: true },
+  { id: 5, name: "Ikeja", state: "Lagos", active: true },
+  { id: 6, name: "Lekki Phase 1", state: "Lagos", active: true },
+  { id: 7, name: "Port Harcourt City", state: "Rivers", active: true },
+];

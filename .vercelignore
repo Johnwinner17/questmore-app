@@ -1,0 +1,8 @@
+node_modules
+.next
+cloudflared.exe
+*.exe
+*.zip
+*.log
+.git
+.vercel
