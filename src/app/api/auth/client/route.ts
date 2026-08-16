@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
     // server restarts and deployments (not just in-memory).
     // ──────────────────────────────────────────────────────────
     let dbUser: any = null;
+    let isNewUser = false;
 
     try {
       // 1. Look for existing user
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
 
       if (existing.length > 0) {
         dbUser = existing[0];
+        isNewUser = false;
 
         // Update stale fields if needed
         const updates: Record<string, any> = {};
@@ -56,7 +58,8 @@ export async function POST(req: NextRequest) {
           dbUser = { ...dbUser, ...updates };
         }
       } else {
-        // 2. Create new DB user
+        // 2. Create new DB user — brand new registration
+        isNewUser = true;
         const [inserted] = await db
           .insert(users)
           .values({
@@ -95,7 +98,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        isNew: false,
+        isNew: isNewUser,
         user: dbUser,
         tokens: {
           access: `qm_jwt_${Date.now()}_${Math.random().toString(36).substring(7)}`,

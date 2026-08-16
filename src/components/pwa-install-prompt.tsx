@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 
 type Platform = "ios" | "android" | "desktop" | "unknown";
 type Phase = "idle" | "banner" | "ios-guide" | "android-guide" | "already-installed" | "installing" | "success";
@@ -37,7 +37,9 @@ function isDismissedRecently(): boolean {
 export function PWAInstallPrompt() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [platform, setPlatform] = useState<Platform>("unknown");
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  // ─── Use a ref so the deferredPrompt is NEVER stale inside event handlers ───
+  const deferredPromptRef = useRef<any>(null);
+  const [hasPrompt, setHasPrompt] = useState(false); // reactive trigger for UI
 
   const dismiss = useCallback((remember = true) => {
     setPhase("idle");
@@ -58,7 +60,8 @@ export function PWAInstallPrompt() {
     // Capture beforeinstallprompt event (Android / Chrome)
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      deferredPromptRef.current = e; // always update ref immediately
+      setHasPrompt(true);
       // Auto-show banner only if not standalone and not recently dismissed
       if (!isInStandaloneMode() && !isDismissedRecently()) {
         setTimeout(() => setPhase("banner"), 3500);
@@ -66,6 +69,8 @@ export function PWAInstallPrompt() {
     };
 
     const installedHandler = () => {
+      deferredPromptRef.current = null;
+      setHasPrompt(false);
       setPhase("success");
       setTimeout(() => setPhase("idle"), 3500);
     };
@@ -82,8 +87,21 @@ export function PWAInstallPrompt() {
 
       if (currentPlt === "ios") {
         setPhase("ios-guide");
-      } else if (deferredPrompt) {
-        setPhase("banner");
+      } else if (deferredPromptRef.current) {
+        // Immediately trigger native Android install dialog
+        setPhase("installing");
+        const prompt = deferredPromptRef.current;
+        prompt.prompt();
+        prompt.userChoice.then(({ outcome }: { outcome: string }) => {
+          deferredPromptRef.current = null;
+          setHasPrompt(false);
+          if (outcome === "accepted") {
+            setPhase("success");
+            setTimeout(() => setPhase("idle"), 3500);
+          } else {
+            setPhase("idle");
+          }
+        }).catch(() => setPhase("idle"));
       } else {
         // Fallback guide if browser does not support or already fired beforeinstallprompt
         setPhase("android-guide");
@@ -95,22 +113,18 @@ export function PWAInstallPrompt() {
     window.addEventListener("appinstalled", installedHandler);
 
     // Auto-show on iOS Safari after 4 seconds if not standalone & not dismissed
+    let timer: ReturnType<typeof setTimeout> | null = null;
     if (plt === "ios" && !isInStandaloneMode() && !isDismissedRecently()) {
-      const timer = setTimeout(() => setPhase("banner"), 4000);
-      return () => {
-        clearTimeout(timer);
-        window.removeEventListener("open-pwa-install", manualOpenHandler);
-        window.removeEventListener("beforeinstallprompt", handler as any);
-        window.removeEventListener("appinstalled", installedHandler);
-      };
+      timer = setTimeout(() => setPhase("banner"), 4000);
     }
 
     return () => {
+      if (timer) clearTimeout(timer);
       window.removeEventListener("open-pwa-install", manualOpenHandler);
       window.removeEventListener("beforeinstallprompt", handler as any);
       window.removeEventListener("appinstalled", installedHandler);
     };
-  }, [deferredPrompt]);
+  }, []); // ← empty deps — no stale closures since we use deferredPromptRef
 
   const handleInstall = async () => {
     if (platform === "ios") {
@@ -118,12 +132,14 @@ export function PWAInstallPrompt() {
       return;
     }
 
-    if (deferredPrompt) {
+    if (deferredPromptRef.current) {
       setPhase("installing");
       try {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        setDeferredPrompt(null);
+        const prompt = deferredPromptRef.current;
+        prompt.prompt();
+        const { outcome } = await prompt.userChoice;
+        deferredPromptRef.current = null;
+        setHasPrompt(false);
 
         if (outcome === "accepted") {
           setPhase("success");

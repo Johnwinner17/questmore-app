@@ -173,6 +173,10 @@ export default function AdminPage() {
     api("?table=categories").then(res => Array.isArray(res) && setCatOptions(res));
     api("?table=subcategories").then(res => Array.isArray(res) && setSubOptions(res));
     api("?table=verified_providers").then(res => Array.isArray(res) && setVerifiedProviders(res));
+
+    // ── Auto-refresh stats every 30s so new user/client registrations appear live ──
+    const statsInterval = setInterval(() => loadStats(), 30_000);
+    return () => clearInterval(statsInterval);
   }, [loadStats]);
 
   useEffect(() => {
@@ -618,13 +622,20 @@ export default function AdminPage() {
                   <p className="text-[11px] text-amber-700 font-bold mt-1">₦{stats?.bookingFeeConfig ?? 5000} per request</p>
                 </div>
 
-                <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs">
+                <div
+                  className="bg-white p-4.5 rounded-2xl border-2 border-amber-200 shadow-sm cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition-all"
+                  onClick={() => setSection("users")}
+                  title="Click to view all registered clients"
+                >
                   <div className="flex items-center justify-between text-slate-400 mb-2">
-                    <span className="text-[11.5px] font-extrabold uppercase tracking-wider">Registered Clients</span>
+                    <span className="text-[11.5px] font-extrabold uppercase tracking-wider text-amber-700">Registered Clients</span>
                     <span className="text-xl">👥</span>
                   </div>
-                  <p className="text-[24px] font-black text-slate-900">{stats?.clients ?? 0}</p>
-                  <p className="text-[11px] text-slate-500 font-bold mt-1">Google authenticated</p>
+                  <p className="text-[28px] font-black text-amber-700">{stats?.clients ?? 0}</p>
+                  <p className="text-[11px] font-bold mt-1 flex items-center gap-1">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-slate-500">{stats?.users ?? 0} total users · Click to view</span>
+                  </p>
                 </div>
               </div>
 
