@@ -6,7 +6,7 @@ export function WhatsAppButton() {
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
 
   return (
-    <div className="fixed bottom-[84px] right-4 z-40 flex items-center justify-center">
+    <div className="fixed bottom-[calc(max(env(safe-area-inset-bottom,0px),12px)+68px)] right-4 z-40 flex items-center justify-center">
       {/* Pulse Glow Ring */}
       <div className="absolute h-14 w-14 rounded-2xl bg-emerald-500/40 animate-pulse-glow pointer-events-none" />
       <a

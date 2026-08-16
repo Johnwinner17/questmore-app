@@ -222,13 +222,13 @@ export function AppShell({ initialData }: {
       ) : isUserAuthenticated ? (
         /* ─── AUTHENTICATED CLIENT APP WORKSPACE ─── */
         <div
-          className={clsx("flex h-[100dvh] flex-col", darkMode ? "dark bg-surface-900" : "bg-surface-50")}
+          className={clsx("h-[100dvh] w-full relative overflow-hidden", darkMode ? "dark bg-surface-900" : "bg-surface-50")}
           style={{
             visibility: showSplash ? "hidden" : "visible",
           }}
         >
-          {/* ─── CONTENT ─── */}
-          <div className="flex-1 overflow-hidden relative">
+          {/* ─── FULL-BLEED CONTENT (Extends 100% to screen edges) ─── */}
+          <div className="h-full w-full overflow-hidden relative">
             <div className={clsx("absolute inset-0 transition-transform duration-300", isOnTab ? "translate-x-0" : "-translate-x-full")} style={{ willChange: "transform" }}>
               <div className={clsx("h-full", activeTab !== "home" && "hidden")}>
                 <HomeTab data={initialData} onNavigate={navigate} onSwitchToExplore={switchToExplore} />
@@ -277,37 +277,39 @@ export function AppShell({ initialData }: {
 
           {isOnTab && <WhatsAppButton />}
 
-          {/* ─── FLOATING PREMIUM NAVIGATION BAR ─── */}
-          <nav className="relative flex-shrink-0 px-4 pb-3 pt-1 safe-bottom bg-surface-50/80 backdrop-blur-xs">
-            <div className="floating-nav-card rounded-[26px] p-1.5 flex items-center justify-around">
-              {(["home", "explore", "activity", "account"] as Tab[]).map((tab) => {
-                const isActive = activeTab === tab && isOnTab;
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => switchTab(tab)}
-                    className={clsx(
-                      "flex flex-col items-center justify-center transition-all duration-300 relative",
-                      isActive
-                        ? "bg-[#0B132B] text-white px-5 py-2 rounded-[20px] shadow-md"
-                        : "px-3 py-2 text-slate-500 hover:text-slate-950"
-                    )}
-                  >
-                    <TabIcon tab={tab} active={isActive} />
-                    <span className={clsx(
-                      "text-[10.5px] tracking-tight mt-0.5 transition-colors",
-                      isActive ? "font-bold text-white" : "font-medium text-slate-500"
-                    )}>
-                      {tabLabels[tab]}
-                    </span>
-                    {isActive && (
-                      <div className="w-3.5 h-[2px] bg-amber-400 rounded-full mt-0.5" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </nav>
+          {/* ─── FLOATING PREMIUM NAVIGATION BAR (Truly Floating, ZERO blank bottom white space) ─── */}
+          {isOnTab && (
+            <nav className="fixed bottom-0 left-0 right-0 z-30 px-3.5 pb-[max(env(safe-area-inset-bottom,0px),10px)] pt-0 pointer-events-none">
+              <div className="max-w-md mx-auto floating-nav-card rounded-[26px] p-1.5 flex items-center justify-around pointer-events-auto shadow-2xl">
+                {(["home", "explore", "activity", "account"] as Tab[]).map((tab) => {
+                  const isActive = activeTab === tab && isOnTab;
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => switchTab(tab)}
+                      className={clsx(
+                        "flex flex-col items-center justify-center transition-all duration-300 relative",
+                        isActive
+                          ? "bg-[#0B132B] text-white px-5 py-2 rounded-[20px] shadow-md"
+                          : "px-3 py-2 text-slate-500 hover:text-slate-950"
+                      )}
+                    >
+                      <TabIcon tab={tab} active={isActive} />
+                      <span className={clsx(
+                        "text-[10.5px] tracking-tight mt-0.5 transition-colors",
+                        isActive ? "font-bold text-white" : "font-medium text-slate-500"
+                      )}>
+                        {tabLabels[tab]}
+                      </span>
+                      {isActive && (
+                        <div className="w-3.5 h-[2px] bg-amber-400 rounded-full mt-0.5" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </nav>
+          )}
         </div>
       ) : null}
     </>
