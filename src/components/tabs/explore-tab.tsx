@@ -248,25 +248,25 @@ export function ExploreTab({
         </div>
       </div>
 
-      {/* ─── FLOATING BASKET BAR ─── */}
+      {/* ─── FLOATING BASKET BAR (FIXED so it's never clipped by overflow-hidden) ─── */}
       {basket.length > 0 && (
-        <div className="absolute bottom-3 left-3 right-3 z-30 fade-in">
-          <div className="flex items-center justify-between rounded-2xl p-3 bg-slate-900/95 backdrop-blur-md shadow-2xl border border-slate-700/60 text-white">
+        <div className="fixed bottom-[72px] left-3 right-3 z-[100] animate-slide-up">
+          <div className="flex items-center justify-between rounded-2xl p-3 bg-slate-900/97 backdrop-blur-md shadow-2xl border border-slate-700/60 text-white">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[12px] font-black text-slate-900 bg-amber-400 shadow-xs">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[13px] font-black text-slate-900 bg-amber-400 shadow-xs animate-bounce-soft">
                 {basket.length}
               </div>
               <div className="min-w-0">
                 <p className="text-[12.5px] font-black leading-tight truncate">
-                  {basket.length} {basket.length === 1 ? "Item" : "Items"} • ₦{basketTotalWithFee.toLocaleString()}
+                  {basket.length} {basket.length === 1 ? "Service" : "Services"} Selected
                 </p>
                 <p className="text-[9.5px] text-slate-300 truncate">
-                  Includes ₦5,000 Booking Fee
+                  + ₦5,000 Booking Fee · ₦{basketTotalWithFee.toLocaleString()} total
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <button type="button" onClick={onClearBasket} className="px-2 py-1 text-[10.5px] font-bold text-slate-400 hover:text-white">
+              <button type="button" onClick={onClearBasket} className="px-2 py-1 text-[10.5px] font-bold text-slate-400 hover:text-white transition-colors">
                 Clear
               </button>
               <button
