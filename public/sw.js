@@ -8,7 +8,7 @@
  *  - OFFLINE FALLBACK: Branded /offline.html served when all else fails
  */
 
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const STATIC_CACHE  = `questmore-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `questmore-dynamic-${CACHE_VERSION}`;
 const OFFLINE_URL   = '/offline.html';

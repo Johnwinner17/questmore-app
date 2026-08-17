@@ -1,21 +1,22 @@
-import { db } from "@/db";
+import { db, ensureDbInitialized } from "@/db";
 import { categories } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { mockCategories } from "@/lib/mock-data";
+import { serverStore } from "@/lib/server-store";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    await ensureDbInitialized().catch(() => {});
     const data = await db
       .select()
       .from(categories)
       .where(eq(categories.active, true))
       .orderBy(asc(categories.sortOrder));
-    return NextResponse.json(data);
+    if (data && data.length > 0) return NextResponse.json(data);
   } catch (e) {
-    return NextResponse.json(mockCategories);
+    console.error("categories DB error:", e);
   }
+  return NextResponse.json(serverStore.categories);
 }
-

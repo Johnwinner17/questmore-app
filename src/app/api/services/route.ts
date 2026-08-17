@@ -1,8 +1,8 @@
-import { db } from "@/db";
+import { db, ensureDbInitialized } from "@/db";
 import { services } from "@/db/schema";
 import { eq, and, asc } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
-import { mockServices } from "@/lib/mock-data";
+import { serverStore } from "@/lib/server-store";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    await ensureDbInitialized().catch(() => {});
     const data = await db
       .select()
       .from(services)
@@ -25,10 +26,14 @@ export async function GET(req: NextRequest) {
       )
       .orderBy(asc(services.sortOrder));
 
-    return NextResponse.json(data);
+    if (data && data.length > 0) {
+      return NextResponse.json(data);
+    }
   } catch (e) {
-    const filtered = mockServices.filter(s => s.subcategoryId === Number(subcategoryId));
-    return NextResponse.json(filtered.length > 0 ? filtered : mockServices);
+    console.error("services subcategory DB error:", e);
   }
-}
 
+  // Fallback to serverStore (has all 16 services)
+  const filtered = serverStore.services.filter(s => s.subcategoryId === Number(subcategoryId));
+  return NextResponse.json(filtered.length > 0 ? filtered : serverStore.services);
+}
