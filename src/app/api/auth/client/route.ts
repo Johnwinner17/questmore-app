@@ -45,14 +45,14 @@ export async function POST(req: NextRequest) {
         dbUser = existing[0];
         isNewUser = false;
 
-        // Update stale fields if needed
+        // Update fields if provided
         const updates: Record<string, any> = {};
-        if (cleanAvatar && !dbUser.avatarUrl) updates.avatarUrl = cleanAvatar;
+        if (cleanAvatar) updates.avatarUrl = cleanAvatar;
         if (cleanName && (!dbUser.fullName || dbUser.fullName === "Client"))
           updates.fullName = cleanName;
-        if (phone && !dbUser.phone) updates.phone = phone;
-        if (location && !dbUser.location) updates.location = location;
-        if (address && !dbUser.address) updates.address = address;
+        if (phone) updates.phone = phone;
+        if (location) updates.location = location;
+        if (address) updates.address = address;
 
         if (Object.keys(updates).length > 0) {
           await db.update(users).set(updates).where(eq(users.id, dbUser.id));

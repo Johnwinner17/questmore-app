@@ -11,18 +11,20 @@ const globalForDb = globalThis as typeof globalThis & {
   __dbInitialized?: boolean;
 };
 
-// Check if we need SSL (for Render / cloud Postgres)
-const isCloudDb =
+// SSL configuration:
+// - Render internal host (dpg-xxx without .render.com) DOES NOT use SSL (internal private network TCP)
+// - External Render host (xxx.oregon-postgres.render.com) or external clouds DO use SSL
+const isExternalCloudDb =
   databaseUrl.includes("render.com") ||
-  databaseUrl.includes("dpg-") ||
-  databaseUrl.includes("sslmode") ||
-  process.env.NODE_ENV === "production";
+  databaseUrl.includes("neon.tech") ||
+  databaseUrl.includes("supabase.co") ||
+  databaseUrl.includes("sslmode=require");
 
 export const pool =
   globalForDb.__arenaNextJsPostgresqlPool ??
   new Pool({
     connectionString: databaseUrl,
-    ssl: isCloudDb ? { rejectUnauthorized: false } : undefined,
+    ssl: isExternalCloudDb ? { rejectUnauthorized: false } : undefined,
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
@@ -36,9 +38,7 @@ export const db = drizzle(pool);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AUTO-INITIALIZATION & PERSISTENCE ENGINE
-// Ensures all PostgreSQL tables exist and auto-seeds initial data if empty.
-// This guarantees that all registered users, jobs, notifications, and client
-// accounts are permanently stored across deployments and server restarts.
+// Ensures all PostgreSQL tables exist and auto-seeds/syncs platform services.
 // ─────────────────────────────────────────────────────────────────────────────
 export async function ensureDbInitialized(): Promise<boolean> {
   if (globalForDb.__dbInitialized) return true;
@@ -235,51 +235,80 @@ export async function ensureDbInitialized(): Promise<boolean> {
         );
       `);
 
-      // 2. Seed categories if empty
-      const catCheck = await client.query("SELECT COUNT(*) FROM categories");
-      if (parseInt(catCheck.rows[0].count, 10) === 0 && serverStore.categories.length > 0) {
-        for (const c of serverStore.categories) {
-          await client.query(
-            "INSERT INTO categories (id, name, slug, description, icon, image_url, sort_order, active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING",
-            [c.id, c.name, c.slug, c.description, c.icon, c.imageUrl, c.sortOrder || 0, true]
-          );
-        }
+      // 2. Sync / Upsert Categories
+      for (const c of serverStore.categories) {
+        await client.query(
+          `INSERT INTO categories (id, name, slug, description, icon, image_url, sort_order, active)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (id) DO UPDATE SET
+             name = EXCLUDED.name,
+             slug = EXCLUDED.slug,
+             description = EXCLUDED.description,
+             icon = EXCLUDED.icon,
+             image_url = EXCLUDED.image_url,
+             sort_order = EXCLUDED.sort_order,
+             active = EXCLUDED.active`,
+          [c.id, c.name, c.slug, c.description, c.icon, c.imageUrl, c.sortOrder || 0, true]
+        );
       }
 
-      // 3. Seed subcategories if empty
-      const subCheck = await client.query("SELECT COUNT(*) FROM subcategories");
-      if (parseInt(subCheck.rows[0].count, 10) === 0 && serverStore.subcategories.length > 0) {
-        for (const s of serverStore.subcategories) {
-          await client.query(
-            "INSERT INTO subcategories (id, category_id, name, slug, description, icon, image_url, sort_order, active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING",
-            [s.id, s.categoryId, s.name, s.slug, s.description, s.icon, s.imageUrl, s.sortOrder || 0, true]
-          );
-        }
+      // 3. Sync / Upsert Subcategories
+      for (const s of serverStore.subcategories) {
+        await client.query(
+          `INSERT INTO subcategories (id, category_id, name, slug, description, icon, image_url, sort_order, active)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (id) DO UPDATE SET
+             category_id = EXCLUDED.category_id,
+             name = EXCLUDED.name,
+             slug = EXCLUDED.slug,
+             description = EXCLUDED.description,
+             icon = EXCLUDED.icon,
+             image_url = EXCLUDED.image_url,
+             sort_order = EXCLUDED.sort_order,
+             active = EXCLUDED.active`,
+          [s.id, s.categoryId, s.name, s.slug, s.description, s.icon, s.imageUrl, s.sortOrder || 0, true]
+        );
       }
 
-      // 4. Seed services if empty
-      const svcCheck = await client.query("SELECT COUNT(*) FROM services");
-      if (parseInt(svcCheck.rows[0].count, 10) === 0 && serverStore.services.length > 0) {
-        for (const s of serverStore.services) {
-          await client.query(
-            "INSERT INTO services (id, subcategory_id, category_id, name, slug, short_description, full_description, image_url, gallery, price, featured, sort_order, active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) ON CONFLICT (id) DO NOTHING",
-            [s.id, s.subcategoryId, s.categoryId, s.name, s.slug, s.shortDescription, s.fullDescription, s.imageUrl, s.gallery, s.price || null, s.featured || false, s.sortOrder || 0, true]
-          );
-        }
+      // 4. Sync / Upsert all 16 Negotiated Services
+      for (const s of serverStore.services) {
+        await client.query(
+          `INSERT INTO services (id, subcategory_id, category_id, name, slug, short_description, full_description, image_url, gallery, price, featured, sort_order, active)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+           ON CONFLICT (id) DO UPDATE SET
+             subcategory_id = EXCLUDED.subcategory_id,
+             category_id = EXCLUDED.category_id,
+             name = EXCLUDED.name,
+             slug = EXCLUDED.slug,
+             short_description = EXCLUDED.short_description,
+             full_description = EXCLUDED.full_description,
+             image_url = EXCLUDED.image_url,
+             gallery = EXCLUDED.gallery,
+             price = EXCLUDED.price,
+             featured = EXCLUDED.featured,
+             sort_order = EXCLUDED.sort_order,
+             active = EXCLUDED.active`,
+          [s.id, s.subcategoryId, s.categoryId, s.name, s.slug, s.shortDescription, s.fullDescription, s.imageUrl, s.gallery, s.price || null, s.featured || false, s.sortOrder || 0, true]
+        );
       }
 
-      // 5. Seed professions if empty
-      const profCheck = await client.query("SELECT COUNT(*) FROM provider_professions");
-      if (parseInt(profCheck.rows[0].count, 10) === 0 && serverStore.professions.length > 0) {
-        for (const p of serverStore.professions) {
-          await client.query(
-            "INSERT INTO provider_professions (id, name, slug, description, icon, sort_order, active) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING",
-            [p.id, p.name, p.slug, p.description, p.icon, p.sortOrder || 0, true]
-          );
-        }
+      // 5. Sync / Upsert Professions
+      for (const p of serverStore.professions) {
+        await client.query(
+          `INSERT INTO provider_professions (id, name, slug, description, icon, sort_order, active)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (id) DO UPDATE SET
+             name = EXCLUDED.name,
+             slug = EXCLUDED.slug,
+             description = EXCLUDED.description,
+             icon = EXCLUDED.icon,
+             sort_order = EXCLUDED.sort_order,
+             active = EXCLUDED.active`,
+          [p.id, p.name, p.slug, p.description, p.icon, p.sortOrder || 0, true]
+        );
       }
 
-      // Reset auto-increment sequences so new inserts don't conflict
+      // Reset auto-increment sequences
       await client.query(`
         SELECT setval(pg_get_serial_sequence('categories', 'id'), coalesce(max(id), 0) + 1, false) FROM categories;
         SELECT setval(pg_get_serial_sequence('subcategories', 'id'), coalesce(max(id), 0) + 1, false) FROM subcategories;
@@ -288,7 +317,7 @@ export async function ensureDbInitialized(): Promise<boolean> {
       `);
 
       globalForDb.__dbInitialized = true;
-      console.log("[QuestMore DB] PostgreSQL tables initialized and ready for permanent persistence.");
+      console.log("[QuestMore DB] PostgreSQL tables initialized and ready with 16 negotiated services.");
       return true;
     } finally {
       client.release();
