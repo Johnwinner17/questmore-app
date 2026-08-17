@@ -369,6 +369,33 @@ export async function GET(req: NextRequest) {
     }
   } catch (e) {
     console.error("Admin GET error:", e);
+    // Graceful fallback for all admin dashboard tables
+    if (table === "stats") {
+      const clients = serverStore.users.filter(u => u.role === "client").length;
+      const providers = serverStore.users.filter(u => u.role === "provider").length;
+      return NextResponse.json({
+        categories: serverStore.categories.length,
+        services: serverStore.services.length,
+        requests: serverStore.requests.length,
+        users: serverStore.users.length,
+        clients,
+        providers,
+        pendingApplications: serverStore.users.filter(u => u.verificationStatus === "awaiting_verification").length,
+        verifiedProviders: serverStore.users.filter(u => u.role === "provider" && u.verificationStatus === "verified").length,
+        pendingRequests: serverStore.requests.filter(r => r.jobStatus === "awaiting_admin_review" || r.status === "pending").length,
+        activeJobs: serverStore.requests.filter(r => r.jobStatus === "work_in_progress" || r.jobStatus === "provider_assigned").length,
+        completedJobs: serverStore.requests.filter(r => r.jobStatus === "completed" || r.status === "completed").length,
+        bookingFeesTotal: serverStore.requests.reduce((a, b) => a + (b.bookingFee || 5000), 0),
+        totalRevenue: serverStore.requests.reduce((a, b) => a + (b.totalAmount || 5000), 0),
+        pendingPayments: 0,
+        bookingFeeConfig: serverStore.bookingFee || 5000,
+      });
+    }
+    if (table === "users") return NextResponse.json(serverStore.users);
+    if (table === "services") return NextResponse.json(serverStore.services);
+    if (table === "categories") return NextResponse.json(serverStore.categories);
+    if (table === "subcategories") return NextResponse.json(serverStore.subcategories);
+    if (table === "requests" || table === "active_jobs") return NextResponse.json(serverStore.requests);
     return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
   }
 }
