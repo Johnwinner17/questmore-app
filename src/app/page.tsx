@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db, ensureDbInitialized } from "@/db";
 import { categories, banners, services, reviews } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { AppShell } from "@/components/app-shell";
@@ -13,6 +13,7 @@ export default async function HomePage() {
   let featuredReviews = mockReviews;
 
   try {
+    await ensureDbInitialized().catch(() => {});
     const [dbCats, dbBanners, dbServices, dbReviews] = await Promise.all([
       db
         .select()

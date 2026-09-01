@@ -498,7 +498,7 @@ export default function AdminPage() {
     } else {
       // Create new default
       setServiceName("");
-      setServiceCategoryId(1);
+      setServiceCategoryId(catOptions[0]?.id || 1);
       setServiceSubcategoryId(null);
       setServiceShortDesc("");
       setServiceFullDesc("");

@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db, ensureDbInitialized } from "@/db";
 import { notifications, users } from "@/db/schema";
 import { eq, desc, or, and, isNull } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
   const role = req.nextUrl.searchParams.get("role") || "client";
 
   try {
+    await ensureDbInitialized().catch(() => {});
     let notifs: any[] = [];
 
     try {

@@ -77,13 +77,13 @@ export function RequestPage({
   }, []);
 
   const [form, setForm] = useState({
-    fullName: "Dr. Amina Yusuf",
-    email: "amina.yusuf@gmail.com",
-    phone: "+2348156307091",
+    fullName: "",
+    email: "",
+    phone: "",
     categoryId: category ? String(category.id) : (selectedList[0]?.categoryId ? String(selectedList[0].categoryId) : ""),
     description: "",
-    location: "Maitama, Abuja",
-    address: "No 7 Mississippi Street",
+    location: "Abuja (FCT)",
+    address: "",
     preferredDate: "",
     preferredTime: "morning",
     urgency: "standard",

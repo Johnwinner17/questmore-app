@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db, ensureDbInitialized } from "@/db";
 import { serviceRequests, users, notifications } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
   const email = req.nextUrl.searchParams.get("email");
 
   try {
+    await ensureDbInitialized().catch(() => {});
     if (providerId) {
       // Try DB first
       try {
@@ -90,6 +91,7 @@ export async function GET(req: NextRequest) {
 // POST /api/provider/jobs — provider actions: accept_job | start_work | mark_completed | decline_job
 export async function POST(req: NextRequest) {
   try {
+    await ensureDbInitialized().catch(() => {});
     const body = await req.json();
     const { action, requestId, providerId, note } = body;
 

@@ -211,6 +211,59 @@ export function HomeTab({ data, onNavigate, onSwitchToExplore }: HomeTabProps) {
           </div>
         </div>
 
+        {/* ─── DYNAMIC CATEGORIES GRID (TITLES & TRADES) ─── */}
+        {data.categories.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-[16px] font-black tracking-tight text-slate-900">Engineering Categories</h3>
+                <p className="text-[11.5px] text-slate-500 font-medium">Browse verified listings by trade title</p>
+              </div>
+              <button
+                onClick={onSwitchToExplore}
+                className="text-[12px] font-black text-amber-600 hover:text-amber-700 flex items-center gap-1"
+              >
+                <span>View All</span>
+                <span>→</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {data.categories.map((cat) => {
+                const iconMap: Record<string, string> = {
+                  building: "🏗️",
+                  zap: "⚡",
+                  droplets: "🔧",
+                  home: "🏠",
+                  wrench: "🛠️",
+                  "hard-hat": "👷",
+                };
+                const displayIcon = iconMap[cat.icon || "building"] || cat.icon || "🏗️";
+
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => onNavigate({ type: "category", category: cat })}
+                    className="flex flex-col items-start p-3.5 rounded-2xl bg-white border border-slate-200/80 hover:border-amber-400 hover:shadow-sm transition-all text-left group active:scale-[0.98]"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-[20px] mb-2 group-hover:scale-110 transition-transform">
+                      {displayIcon}
+                    </div>
+                    <h4 className="text-[13px] font-black text-slate-900 leading-snug line-clamp-1 group-hover:text-amber-600 transition-colors">
+                      {cat.name}
+                    </h4>
+                    {cat.description && (
+                      <p className="text-[10.5px] text-slate-400 font-medium line-clamp-1 mt-0.5">
+                        {cat.description}
+                      </p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ─── BANNER CAROUSEL ─── */}
         {data.banners.length > 0 && (
           <div>

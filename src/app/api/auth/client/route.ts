@@ -201,6 +201,55 @@ export async function POST(req: NextRequest) {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // 2.5 ACTION: UPDATE PROFILE (FOR LOGGED-IN USERS)
+    // ─────────────────────────────────────────────────────────────────────────
+    if (action === "update_profile") {
+      const cleanEmail = (googleEmail || email || "").toLowerCase().trim();
+      if (!cleanEmail) {
+        return NextResponse.json({ error: "Email is required." }, { status: 400 });
+      }
+
+      const updateData: Record<string, any> = { updatedAt: new Date() };
+      if (fullName) updateData.fullName = fullName.trim();
+      if (phone) updateData.phone = phone.trim();
+      if (location) updateData.location = location.trim();
+      if (address !== undefined) updateData.address = address.trim();
+      if (avatarUrl) updateData.avatarUrl = avatarUrl;
+      if (password && password.length >= 6) {
+        updateData.passwordHash = hashPassword(password);
+      }
+
+      let updatedUser: any = null;
+      try {
+        const [u] = await db
+          .update(users)
+          .set(updateData)
+          .where(eq(users.email, cleanEmail))
+          .returning();
+        updatedUser = u;
+      } catch (e) {
+        console.error("Update profile DB error:", e);
+      }
+
+      if (!updatedUser) {
+        const uIdx = serverStore.users.findIndex((u) => u.email?.toLowerCase() === cleanEmail);
+        if (uIdx >= 0) {
+          serverStore.users[uIdx] = { ...serverStore.users[uIdx], ...updateData };
+          updatedUser = serverStore.users[uIdx];
+        }
+      }
+
+      if (!updatedUser) {
+        return NextResponse.json({ error: "User not found." }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        user: sanitizeUser(updatedUser),
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // 3. ACTION: FIRST-TIME SIGN-UP COMPLETION
     // ─────────────────────────────────────────────────────────────────────────
     if (action === "google_signup" || action === "complete_signup") {

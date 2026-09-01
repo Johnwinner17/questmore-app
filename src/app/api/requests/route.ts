@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db, ensureDbInitialized } from "@/db";
 import { serviceRequests, categories } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   const email = req.nextUrl.searchParams.get("email");
 
   try {
+    await ensureDbInitialized().catch(() => {});
     const data = await db
       .select({
         id: serviceRequests.id,
