@@ -271,3 +271,29 @@ export const notifications = pgTable("notifications", {
   linkUrl: text("link_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Payments & Transactions Table (Paystack Automatic Payment Verification)
+// ─────────────────────────────────────────────────────────────────────────────
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  reference: varchar("reference", { length: 255 }).notNull().unique(),
+  userId: integer("user_id"),
+  requestId: integer("request_id"),
+  customerEmail: varchar("customer_email", { length: 255 }).notNull(),
+  customerName: varchar("customer_name", { length: 255 }),
+  customerPhone: varchar("customer_phone", { length: 50 }),
+  expectedAmount: integer("expected_amount").notNull(), // in Naira
+  paidAmount: integer("paid_amount"), // in Naira
+  currency: varchar("currency", { length: 10 }).default("NGN"),
+  paymentStatus: varchar("payment_status", { length: 50 }).default("pending"), // 'pending' | 'processing' | 'successful' | 'failed' | 'abandoned' | 'reversed' | 'verification_failed'
+  verificationStatus: varchar("verification_status", { length: 50 }).default("unverified"), // 'unverified' | 'verified' | 'failed'
+  fulfillmentStatus: varchar("fulfillment_status", { length: 50 }).default("unfulfilled"), // 'unfulfilled' | 'fulfilled' | 'failed'
+  paymentChannel: varchar("payment_channel", { length: 50 }),
+  paystackTxId: varchar("paystack_tx_id", { length: 100 }),
+  gatewayResponse: text("gateway_response"),
+  metadata: text("metadata"),
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});

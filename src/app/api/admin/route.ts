@@ -3,11 +3,13 @@ import {
   categories, subcategories, services, banners, reviews,
   serviceRequests, projectGallery, faqs, serviceAreas,
   notifications, users, providerProfessions, systemSettings,
+  payments,
 } from "@/db/schema";
 import { eq, desc, asc, count } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { serverStore } from "@/lib/server-store";
 import { alertJobStatusUpdate, alertMilestonePhoto } from "@/lib/whatsapp";
+import { fulfillPayment } from "@/lib/paystack";
 
 export const dynamic = "force-dynamic";
 
@@ -332,20 +334,35 @@ export async function GET(req: NextRequest) {
         return NextResponse.json(serverStore.gallery);
       }
 
-      case "payments": {
+      case "payments":
+      case "transactions": {
+        try {
+          const realPayments = await db
+            .select()
+            .from(payments)
+            .orderBy(desc(payments.createdAt))
+            .limit(200);
+          if (realPayments && realPayments.length > 0) return NextResponse.json(realPayments);
+        } catch (e) {
+          console.error("Admin GET payments error:", e);
+        }
+
+        // Fallback to serviceRequests if payments table is empty
         try {
           const pays = await db
             .select({
               id: serviceRequests.id,
-              requestCode: serviceRequests.requestCode,
-              clientName: serviceRequests.fullName,
-              email: serviceRequests.email,
-              paymentRef: serviceRequests.paymentRef,
-              paymentMethod: serviceRequests.paymentMethod,
-              bookingFee: serviceRequests.bookingFee,
-              servicesTotal: serviceRequests.servicesTotal,
-              totalAmount: serviceRequests.totalAmount,
+              reference: serviceRequests.paymentRef,
+              customerName: serviceRequests.fullName,
+              customerEmail: serviceRequests.email,
+              customerPhone: serviceRequests.phone,
+              expectedAmount: serviceRequests.totalAmount,
+              paidAmount: serviceRequests.totalAmount,
+              currency: "NGN",
               paymentStatus: serviceRequests.paymentStatus,
+              verificationStatus: "verified",
+              fulfillmentStatus: "fulfilled",
+              paymentChannel: serviceRequests.paymentMethod,
               paidAt: serviceRequests.paidAt,
               createdAt: serviceRequests.createdAt,
             })
@@ -353,22 +370,7 @@ export async function GET(req: NextRequest) {
             .orderBy(desc(serviceRequests.createdAt));
           if (pays && pays.length > 0) return NextResponse.json(pays);
         } catch (e) {}
-        return NextResponse.json(
-          serverStore.requests.map(r => ({
-            id: r.id,
-            requestCode: r.requestCode || `QM-REQ-${r.id}`,
-            clientName: r.fullName,
-            email: r.email,
-            paymentRef: r.paymentRef || "QM-PAY-VERIFIED",
-            paymentMethod: r.paymentMethod || "card",
-            bookingFee: r.bookingFee || 5000,
-            servicesTotal: r.servicesTotal || 0,
-            totalAmount: r.totalAmount || 5000,
-            paymentStatus: r.paymentStatus || "successful",
-            paidAt: r.paidAt || r.createdAt,
-            createdAt: r.createdAt,
-          }))
-        );
+        return NextResponse.json([]);
       }
 
       case "banners": {

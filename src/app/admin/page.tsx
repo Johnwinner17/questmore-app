@@ -387,6 +387,35 @@ export default function AdminPage() {
   const [userRoleFilter, setUserRoleFilter] = useState<string>("all");
   const [userStatusFilter, setUserStatusFilter] = useState<string>("all");
 
+  // ── Payments & Paystack Filters & Actions ──
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all");
+  const [paymentSearchQuery, setPaymentSearchQuery] = useState<string>("");
+  const [reverifyingRef, setReverifyingRef] = useState<string | null>(null);
+
+  const handleReverifyPaystack = async (reference: string) => {
+    if (!reference) return;
+    setReverifyingRef(reference);
+    try {
+      const res = await fetch("/api/paystack/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`✓ Paystack Verified: ${reference} marked SUCCESSFUL!`);
+        loadData("payments");
+        loadStats();
+      } else {
+        showToast(`⚠️ Paystack Query: ${data.error || "Failed"}`);
+      }
+    } catch (e: any) {
+      showToast("Verification request failed");
+    } finally {
+      setReverifyingRef(null);
+    }
+  };
+
   const openCreateCategory = () => {
     setCategoryNameInput("");
     setCategorySlugInput("");
@@ -2225,8 +2254,296 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* 7. ALL OTHER SECTIONS */}
-          {!["dashboard", "services", "categories", "banners", "job_requests", "notifications", "users", "provider_management"].includes(section) && (
+          {/* 7. PAYMENTS & PAYSTACK TRANSACTIONS MANAGEMENT */}
+          {section === "payments" && (
+            <div className="space-y-4">
+              {/* Header & Export Bar */}
+              <div className="flex items-center justify-between flex-wrap gap-3 bg-white p-5 rounded-3xl border border-slate-200 shadow-xs">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-[18px] font-black text-slate-900">💳 Paystack Payments & Transactions</h3>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-black text-emerald-700">
+                      <span>✓</span> Live Webhook & API Verification
+                    </span>
+                  </div>
+                  <p className="text-[12px] text-slate-500 font-medium mt-0.5">
+                    Real-time automatic verification of client booking fees & engineering service payments
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => exportToCSV(data, "questmore_paystack_transactions")}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 text-slate-700 text-[12px] font-extrabold hover:bg-slate-50 transition-colors shadow-2xs"
+                  >
+                    <span>📥</span>
+                    <span>Export CSV</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { loadData("payments"); loadStats(); }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 text-white text-[12px] font-extrabold hover:bg-slate-800 transition-colors shadow-2xs"
+                  >
+                    <span>🔄</span>
+                    <span>Refresh</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Financial Quick KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                  <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Total Collected</p>
+                  <p className="text-[20px] font-black text-emerald-700 mt-1">
+                    ₦{(stats.totalRevenue || 0).toLocaleString()}
+                  </p>
+                  <p className="text-[10.5px] text-slate-400 mt-0.5">Verified booking & job fees</p>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                  <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Total Transactions</p>
+                  <p className="text-[20px] font-black text-slate-900 mt-1">{data.length}</p>
+                  <p className="text-[10.5px] text-slate-400 mt-0.5">Recorded transactions</p>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                  <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Paid / Successful</p>
+                  <p className="text-[20px] font-black text-emerald-600 mt-1">
+                    {data.filter((p: any) => p.paymentStatus === "successful").length}
+                  </p>
+                  <p className="text-[10.5px] text-slate-400 mt-0.5">Automated fulfillments</p>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                  <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Pending / Review</p>
+                  <p className="text-[20px] font-black text-amber-600 mt-1">
+                    {data.filter((p: any) => p.paymentStatus !== "successful").length}
+                  </p>
+                  <p className="text-[10.5px] text-slate-400 mt-0.5">Awaiting verification</p>
+                </div>
+              </div>
+
+              {/* Filters & Search */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex-1 min-w-[240px]">
+                  <input
+                    type="text"
+                    placeholder="Search by Reference (QM-PAY-...), Email, Customer Name, or Paystack Tx ID..."
+                    value={paymentSearchQuery}
+                    onChange={(e) => setPaymentSearchQuery(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-[12.5px] font-medium outline-none focus:border-amber-500 focus:bg-white"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { id: "all", label: "All" },
+                    { id: "successful", label: "✓ Successful (Paid)" },
+                    { id: "pending", label: "⏳ Pending" },
+                    { id: "verification_failed", label: "⚠️ Verification Failed" },
+                    { id: "failed", label: "✕ Failed" },
+                  ].map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setPaymentStatusFilter(f.id)}
+                      className={clsx(
+                        "px-3 py-1.5 rounded-xl text-[11.5px] font-extrabold transition-all",
+                        paymentStatusFilter === f.id
+                          ? "bg-slate-900 text-white shadow-xs"
+                          : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60"
+                      )}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Transactions List */}
+              {loading ? (
+                <div className="p-12 text-center text-slate-400">Loading Paystack payments from PostgreSQL database...</div>
+              ) : (
+                (() => {
+                  const filteredPayments = data.filter((row: any) => {
+                    if (paymentStatusFilter !== "all" && row.paymentStatus !== paymentStatusFilter) return false;
+                    if (paymentSearchQuery.trim()) {
+                      const q = paymentSearchQuery.toLowerCase().trim();
+                      const refMatch = String(row.reference || row.paymentRef || "").toLowerCase().includes(q);
+                      const emailMatch = String(row.customerEmail || row.email || "").toLowerCase().includes(q);
+                      const nameMatch = String(row.customerName || row.clientName || "").toLowerCase().includes(q);
+                      const txMatch = String(row.paystackTxId || "").toLowerCase().includes(q);
+                      return refMatch || emailMatch || nameMatch || txMatch;
+                    }
+                    return true;
+                  });
+
+                  if (filteredPayments.length === 0) {
+                    return (
+                      <div className="bg-white p-12 text-center rounded-2xl border border-slate-200 text-slate-500">
+                        <span className="text-3xl block mb-2">💳</span>
+                        <p className="font-bold text-[14px]">No transactions match your filter</p>
+                        <p className="text-[12px] text-slate-400 mt-1">Transactions will automatically appear here as clients checkout with Paystack.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-3">
+                      {filteredPayments.map((row: any) => {
+                        const ref = row.reference || row.paymentRef || `QM-PAY-${row.id}`;
+                        const isSuccessful = row.paymentStatus === "successful";
+                        const isFailed = row.paymentStatus === "failed" || row.paymentStatus === "verification_failed";
+                        const isPending = !isSuccessful && !isFailed;
+                        const channel = row.paymentChannel || row.paymentMethod || "card";
+                        const amount = row.paidAmount || row.expectedAmount || row.totalAmount || row.bookingFee || 5000;
+                        const customerEmail = row.customerEmail || row.email;
+                        const customerName = row.customerName || row.clientName || "QuestMore Client";
+                        const customerPhone = row.customerPhone || row.phone;
+
+                        return (
+                          <div
+                            key={row.id || ref}
+                            className={clsx(
+                              "bg-white rounded-2xl border p-4.5 shadow-2xs transition-all space-y-3",
+                              isSuccessful ? "border-slate-200/90" : isFailed ? "border-red-200 bg-red-50/20" : "border-amber-200 bg-amber-50/20"
+                            )}
+                          >
+                            {/* Top Meta Row */}
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono font-black text-[12px] bg-slate-100 text-slate-900 px-2.5 py-1 rounded-lg border border-slate-200">
+                                  {ref}
+                                </span>
+                                <span className="text-[11px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                                  {channel === "card" ? "💳 Debit Card" : channel === "transfer" ? "🏦 Bank Transfer" : channel === "ussd" ? "📱 USSD" : `⚡ ${channel}`}
+                                </span>
+                                {row.paystackTxId && (
+                                  <span className="text-[10.5px] font-mono text-slate-400">
+                                    Tx ID: #{row.paystackTxId}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={clsx(
+                                    "px-2.5 py-1 rounded-full text-[11px] font-black border",
+                                    isSuccessful
+                                      ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                                      : isFailed
+                                      ? "bg-red-50 text-red-800 border-red-300"
+                                      : "bg-amber-50 text-amber-800 border-amber-300 animate-pulse"
+                                  )}
+                                >
+                                  {isSuccessful ? "✓ PAID / SUCCESSFUL" : isFailed ? "⚠️ VERIFICATION FAILED" : "⏳ PENDING"}
+                                </span>
+
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                                  🛡️ {row.verificationStatus === "verified" ? "Verified" : "Unverified"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Customer & Amount Details Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100 text-[12px]">
+                              <div>
+                                <p className="text-[10.5px] font-extrabold text-slate-400 uppercase">Customer</p>
+                                <p className="font-black text-slate-900 mt-0.5">{customerName}</p>
+                                {customerEmail && <p className="text-slate-500 text-[11px] truncate">{customerEmail}</p>}
+                                {customerPhone && <p className="text-slate-500 font-mono text-[11px]">{customerPhone}</p>}
+                              </div>
+
+                              <div>
+                                <p className="text-[10.5px] font-extrabold text-slate-400 uppercase">Amount Details</p>
+                                <p className="text-[15px] font-black text-emerald-700 mt-0.5">
+                                  ₦{amount.toLocaleString()}
+                                </p>
+                                <p className="text-[11px] text-slate-400">
+                                  Expected: ₦{(row.expectedAmount || amount).toLocaleString()} • NGN
+                                </p>
+                              </div>
+
+                              <div>
+                                <p className="text-[10.5px] font-extrabold text-slate-400 uppercase">Date & Fulfillment</p>
+                                <p className="font-bold text-slate-700 mt-0.5">
+                                  {row.paidAt || row.createdAt
+                                    ? new Date(row.paidAt || row.createdAt).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })
+                                    : "—"
+                                  }
+                                </p>
+                                <p className="text-[11px] text-slate-500">
+                                  Fulfillment: <span className="font-bold text-slate-800">{row.fulfillmentStatus || (isSuccessful ? "fulfilled" : "unfulfilled")}</span>
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Actions Row */}
+                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                {/* Re-Verify with Paystack API */}
+                                <button
+                                  type="button"
+                                  disabled={reverifyingRef === ref}
+                                  onClick={() => handleReverifyPaystack(ref)}
+                                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50/70 text-blue-800 text-[11.5px] font-extrabold hover:bg-blue-100 transition-colors"
+                                >
+                                  {reverifyingRef === ref ? (
+                                    <>
+                                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-blue-700 border-t-transparent" />
+                                      <span>Verifying with Paystack...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span>⚡</span>
+                                      <span>Re-Verify with Paystack</span>
+                                    </>
+                                  )}
+                                </button>
+
+                                {/* Direct WhatsApp */}
+                                {customerPhone && (
+                                  <a
+                                    href={`https://wa.me/${customerPhone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                                      `Hello ${customerName}, this is QuestMore Engineering regarding your payment of ₦${amount.toLocaleString()} (Ref: ${ref}).`
+                                    )}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-[11.5px] font-extrabold hover:bg-emerald-100 transition-colors"
+                                  >
+                                    <span>💬</span>
+                                    <span>WhatsApp</span>
+                                  </a>
+                                )}
+
+                                {/* Switch to Job Requests */}
+                                <button
+                                  type="button"
+                                  onClick={() => setSection("job_requests")}
+                                  className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 text-[11.5px] font-extrabold hover:bg-slate-50 transition-colors"
+                                >
+                                  📋 View Requests
+                                </button>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDelete("payments", Number(row.id))}
+                                className="text-red-500 hover:text-red-700 text-[11px] font-bold px-2 py-1"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+          )}
+
+          {/* 8. ALL OTHER SECTIONS */}
+          {!["dashboard", "services", "categories", "banners", "job_requests", "notifications", "users", "provider_management", "payments"].includes(section) && (
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-[16px] font-black text-slate-900 capitalize">{section.replace(/_/g, " ")}</h3>

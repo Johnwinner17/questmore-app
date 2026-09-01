@@ -41,11 +41,11 @@ export async function POST(req: NextRequest) {
     const BOOKING_FEE = serverStore.bookingFee || 5000;
 
     let servicesTotal = 0;
-    let servicesArr = [];
+    const rawServices = body.selectedServices || body.services || [];
+    let servicesArr = Array.isArray(rawServices) ? rawServices : [];
 
-    if (Array.isArray(services) && services.length > 0) {
-      servicesArr = services;
-      services.forEach((s: any) => {
+    if (servicesArr.length > 0) {
+      servicesArr.forEach((s: any) => {
         if (s.price && typeof s.price === "number" && !s.isNegotiable) {
           servicesTotal += s.price;
         }

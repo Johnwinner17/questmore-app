@@ -243,6 +243,29 @@ export async function ensureDbInitialized(): Promise<boolean> {
           featured BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP DEFAULT NOW()
         );
+
+        CREATE TABLE IF NOT EXISTS payments (
+          id SERIAL PRIMARY KEY,
+          reference VARCHAR(255) NOT NULL UNIQUE,
+          user_id INTEGER,
+          request_id INTEGER,
+          customer_email VARCHAR(255) NOT NULL,
+          customer_name VARCHAR(255),
+          customer_phone VARCHAR(50),
+          expected_amount INTEGER NOT NULL,
+          paid_amount INTEGER,
+          currency VARCHAR(10) DEFAULT 'NGN',
+          payment_status VARCHAR(50) DEFAULT 'pending',
+          verification_status VARCHAR(50) DEFAULT 'unverified',
+          fulfillment_status VARCHAR(50) DEFAULT 'unfulfilled',
+          payment_channel VARCHAR(50),
+          paystack_tx_id VARCHAR(100),
+          gateway_response TEXT,
+          metadata TEXT,
+          paid_at TIMESTAMP,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        );
       `);
 
       // 2. Self-Healing Schema Alterations (guarantee all columns exist without crashing)
