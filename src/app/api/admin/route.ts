@@ -5,7 +5,7 @@ import {
   notifications, users, providerProfessions, systemSettings,
   payments,
 } from "@/db/schema";
-import { eq, desc, asc, count } from "drizzle-orm";
+import { eq, desc, asc, count, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { serverStore } from "@/lib/server-store";
 import { alertJobStatusUpdate, alertMilestonePhoto } from "@/lib/whatsapp";
@@ -80,8 +80,8 @@ export async function GET(req: NextRequest) {
           const [allUsers] = await db.select({ c: count() }).from(users);
           const clientCount = await db.select({ c: count() }).from(users).where(eq(users.role, "client"));
           const providerCount = await db.select({ c: count() }).from(users).where(eq(users.role, "provider"));
-          const pendingApps = await db.select({ c: count() }).from(users).where(eq(users.verificationStatus, "awaiting_verification"));
-          const verifiedProviders = await db.select({ c: count() }).from(users).where(eq(users.verificationStatus, "verified"));
+          const pendingApps = await db.select({ c: count() }).from(users).where(and(eq(users.role, "provider"), eq(users.verificationStatus, "awaiting_verification")));
+          const verifiedProviders = await db.select({ c: count() }).from(users).where(and(eq(users.role, "provider"), eq(users.verificationStatus, "verified")));
           const pendingReqs = await db.select({ c: count() }).from(serviceRequests).where(eq(serviceRequests.status, "pending"));
           const activeJobs = await db.select({ c: count() }).from(serviceRequests).where(eq(serviceRequests.status, "in_progress"));
           const completedJobs = await db.select({ c: count() }).from(serviceRequests).where(eq(serviceRequests.status, "completed"));
