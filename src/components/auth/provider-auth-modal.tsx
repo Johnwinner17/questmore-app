@@ -122,14 +122,25 @@ export function ProviderAuthModal({ onSuccess, onCancel }: ProviderAuthModalProp
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="bg-white rounded-t-[32px] sm:rounded-[32px] w-full max-w-lg h-[92dvh] sm:h-auto sm:max-h-[88vh] flex flex-col overflow-hidden shadow-2xl animate-scale-up border border-slate-100">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950 text-white shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white text-[22px] shadow-md shadow-blue-600/30">
-              👷
+        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950 text-white shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-10 w-auto bg-white p-1 rounded-xl border border-white/20 shadow-md flex items-center justify-center shrink-0">
+              <img
+                src="/questmore_logo.jpg"
+                alt="QuestMore Engineering Services Limited (RC: 6907014)"
+                className="h-8 w-auto object-contain"
+              />
             </div>
-            <div>
-              <h2 className="text-[16px] font-extrabold tracking-tight text-white">Service Provider Portal</h2>
-              <p className="text-[11px] text-slate-400">QuestMore Engineering Partner Network</p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h2 className="text-[15px] font-extrabold tracking-tight text-white leading-none">QuestMore Provider</h2>
+                <span className="text-[8.5px] font-mono font-black text-amber-400 bg-white/10 px-1.5 py-0.5 rounded border border-white/10">
+                  RC: 6907014
+                </span>
+              </div>
+              <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate">
+                Specialist Network Partner
+              </p>
             </div>
           </div>
           <button

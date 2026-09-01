@@ -89,14 +89,25 @@ export function HomeTab({ data, onNavigate, onSwitchToExplore }: HomeTabProps) {
       <div className="safe-top bg-surface-50" />
 
       {/* ─── FIXED HEADER (Never scrolls) ─── */}
-      <header className="flex-shrink-0 bg-surface-50/95 backdrop-blur-md px-5 pt-3.5 pb-2.5 flex items-center justify-between border-b border-slate-200/60 z-20">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-b from-amber-400 to-amber-500 shadow-md shadow-amber-400/20">
-            <span className="text-[18px] font-black text-slate-950">Q</span>
+      <header className="flex-shrink-0 bg-surface-50/95 backdrop-blur-md px-4 sm:px-5 pt-3.5 pb-2.5 flex items-center justify-between border-b border-slate-200/60 z-20">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="h-10 w-auto bg-white p-1 rounded-xl border border-slate-200/80 shadow-2xs flex items-center justify-center shrink-0">
+            <img
+              src="/questmore_logo.jpg"
+              alt="QuestMore Engineering Services Limited (RC: 6907014)"
+              className="h-8 w-auto object-contain"
+            />
           </div>
-          <div>
-            <h1 className="text-[18px] font-black tracking-tight text-slate-900 leading-none">QuestMore</h1>
-            <p className="text-[9.5px] font-extrabold text-amber-700 tracking-wider uppercase mt-1">ENGINEERING & SERVICES</p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h1 className="text-[16px] font-black tracking-tight text-slate-900 leading-none">QuestMore</h1>
+              <span className="text-[9px] font-mono font-extrabold bg-slate-900 text-amber-400 px-1.5 py-0.5 rounded-md">
+                RC: 6907014
+              </span>
+            </div>
+            <p className="text-[9px] font-extrabold text-amber-700 tracking-wider uppercase mt-0.5 truncate">
+              ENGINEERING SERVICES LIMITED
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">

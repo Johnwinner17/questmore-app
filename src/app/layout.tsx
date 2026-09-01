@@ -4,9 +4,9 @@ import "./globals.css";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 
 export const metadata: Metadata = {
-  title: "QuestMore — Engineering & Property Services",
+  title: "QuestMore Engineering Services Limited (RC: 6907014)",
   description:
-    "Nigeria's trusted platform for construction, electrical, plumbing, property, maintenance, and engineering services. Verified professionals, quality guaranteed.",
+    "Nigeria's trusted platform for construction, electrical, solar, plumbing, mechanical, and engineering services. QuestMore Engineering Services Limited (RC: 6907014). Verified professionals, quality guaranteed.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

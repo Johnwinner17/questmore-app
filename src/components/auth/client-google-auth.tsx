@@ -419,14 +419,25 @@ export function ClientGoogleAuth({ onSuccess, onCancel }: ClientGoogleAuthProps)
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-white rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl animate-scale-up border border-slate-100 max-h-[92dvh] flex flex-col">
         {/* Header Bar */}
-        <div className="bg-slate-950 px-6 py-5 text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-amber-400 font-black text-slate-950 flex items-center justify-center text-lg shadow-md">
-              Q
+        <div className="bg-slate-950 px-5 py-4 text-white flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-10 w-auto bg-white p-1 rounded-xl border border-white/20 shadow-md flex items-center justify-center shrink-0">
+              <img
+                src="/questmore_logo.jpg"
+                alt="QuestMore Engineering Services Limited (RC: 6907014)"
+                className="h-8 w-auto object-contain"
+              />
             </div>
-            <div>
-              <h3 className="text-[17px] font-black tracking-tight leading-none text-white">QuestMore</h3>
-              <p className="text-[11px] text-amber-400 font-bold mt-1">Client Portal Access</p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h3 className="text-[15px] font-black tracking-tight leading-none text-white">QuestMore</h3>
+                <span className="text-[8.5px] font-mono font-black text-amber-400 bg-white/10 px-1.5 py-0.5 rounded border border-white/10">
+                  RC: 6907014
+                </span>
+              </div>
+              <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate">
+                Client Portal Access
+              </p>
             </div>
           </div>
           <button

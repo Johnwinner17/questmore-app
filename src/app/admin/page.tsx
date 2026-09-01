@@ -888,14 +888,25 @@ export default function AdminPage() {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400 font-black text-slate-950 text-lg shadow-md">
-              Q
+        <div className="p-4.5 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-10 w-auto bg-white p-1 rounded-xl border border-white/20 shadow-md flex items-center justify-center shrink-0">
+              <img
+                src="/questmore_logo.jpg"
+                alt="QuestMore Engineering Services Limited (RC: 6907014)"
+                className="h-8 w-auto object-contain"
+              />
             </div>
-            <div>
-              <h1 className="text-[16px] font-black tracking-tight text-white leading-none">QuestMore Admin</h1>
-              <p className="text-[11px] text-amber-400 font-bold mt-1">Management Portal</p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h1 className="text-[15px] font-black tracking-tight text-white leading-none">QuestMore</h1>
+                <span className="text-[8.5px] font-mono font-black text-amber-400 bg-white/10 px-1.5 py-0.5 rounded border border-white/10">
+                  RC: 6907014
+                </span>
+              </div>
+              <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate">
+                Admin Control Studio
+              </p>
             </div>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white">✕</button>

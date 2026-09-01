@@ -220,13 +220,20 @@ export function RequestPage({
     return (
       <div className="h-full flex flex-col items-center justify-center px-6 text-center bg-surface-50 relative overflow-hidden">
         <div className="absolute top-1/4 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-50 border-2 border-emerald-500 shadow-lg scale-in mb-4 text-[40px]">
+        <div className="h-10 w-auto bg-white p-1 rounded-xl border border-slate-200 shadow-2xs mb-3 inline-flex items-center justify-center">
+          <img
+            src="/questmore_logo.jpg"
+            alt="QuestMore Engineering Services Limited (RC: 6907014)"
+            className="h-8 w-auto object-contain"
+          />
+        </div>
+        <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-50 border-2 border-emerald-500 shadow-lg scale-in mb-3 text-[32px]">
           ✅
         </div>
-        <span className="text-[12px] font-mono font-black text-amber-600 bg-amber-100 px-3 py-1 rounded-full mb-2">
+        <span className="text-[12px] font-mono font-black text-amber-700 bg-amber-100 px-3 py-1 rounded-full mb-2 border border-amber-200">
           {submittedRequestCode}
         </span>
-        <h2 className="text-[24px] font-extrabold text-slate-900 tracking-tight">Payment Received!</h2>
+        <h2 className="text-[22px] font-extrabold text-slate-900 tracking-tight">Payment Verified & Received!</h2>
         <p className="mt-2 text-[13.5px] text-slate-600 font-medium leading-relaxed max-w-[340px]">
           ₦{submittedTotal.toLocaleString()} confirmed. Your request is now <strong>pending QuestMore Admin review and approval</strong>. You'll be notified once admin approves and assigns a certified provider.
         </p>

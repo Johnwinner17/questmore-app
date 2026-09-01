@@ -248,16 +248,25 @@ export function AccountTab({
           </div>
         ))}
 
-        {/* App Info Footer */}
-        <div className="pt-4 text-center pb-6">
-          <div className="flex items-center justify-center gap-2 mb-1.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-b from-amber-400 to-amber-500 shadow-sm">
-              <span className="text-[11px] font-black text-slate-900">Q</span>
+        {/* App Info Footer with Corporate Registration */}
+        <div className="pt-4 text-center pb-6 space-y-1.5">
+          <div className="flex flex-col items-center justify-center gap-1.5">
+            <div className="h-10 w-auto bg-white p-1 rounded-xl border border-slate-200 shadow-2xs inline-flex items-center justify-center">
+              <img
+                src="/questmore_logo.jpg"
+                alt="QuestMore Engineering Services Limited (RC: 6907014)"
+                className="h-8 w-auto object-contain"
+              />
             </div>
-            <span className="text-[14px] font-black text-slate-900">QuestMore Engineering</span>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[13.5px] font-black text-slate-900">QuestMore Engineering Services Ltd</span>
+              <span className="text-[9.5px] font-mono font-extrabold bg-slate-900 text-amber-400 px-1.5 py-0.5 rounded">
+                RC: 6907014
+              </span>
+            </div>
           </div>
-          <p className="text-[11px] font-medium text-slate-400">Certified Engineering & Technical Platform · Nigeria</p>
-          <p className="text-[10px] font-bold text-slate-400 mt-0.5">v2.5.0 Production Ready</p>
+          <p className="text-[11px] font-medium text-slate-500">Licensed Engineering, Construction & Technical Services · Nigeria</p>
+          <p className="text-[10px] font-bold text-slate-400">v3.0.0 Production Release</p>
         </div>
       </div>
 

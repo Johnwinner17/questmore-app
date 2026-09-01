@@ -177,14 +177,23 @@ export function PaymentModal({
       <div className="bg-white rounded-t-[32px] sm:rounded-[32px] w-full max-w-lg max-h-[92vh] sm:max-h-[88vh] flex flex-col shadow-2xl overflow-hidden animate-scale-up border border-slate-100">
         {/* Header - Fixed */}
         <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950 text-white shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl bg-amber-400 text-slate-900 font-extrabold flex items-center justify-center text-sm shadow-sm">
-              💳
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-10 w-auto bg-white p-1 rounded-xl border border-white/20 shadow-md flex items-center justify-center shrink-0">
+              <img
+                src="/questmore_logo.jpg"
+                alt="QuestMore Engineering Services Limited (RC: 6907014)"
+                className="h-8 w-auto object-contain"
+              />
             </div>
-            <div>
-              <h3 className="text-[15px] font-black tracking-tight">Paystack Secure Checkout</h3>
-              <p className="text-[11px] text-slate-400 font-mono">
-                {currentReference ? `Ref: ${currentReference}` : "Instant Automatic Verification"}
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h3 className="text-[14.5px] font-black tracking-tight text-white leading-none">Paystack Checkout</h3>
+                <span className="text-[8px] font-mono font-black text-amber-400 bg-white/10 px-1.5 py-0.5 rounded border border-white/10">
+                  RC: 6907014
+                </span>
+              </div>
+              <p className="text-[10.5px] text-slate-400 font-mono mt-0.5 truncate">
+                {currentReference ? `Ref: ${currentReference}` : "QuestMore Engineering Services Ltd"}
               </p>
             </div>
           </div>

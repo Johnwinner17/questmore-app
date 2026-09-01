@@ -174,25 +174,32 @@ export function ProviderDashboard({ user, onSignOut, onSwitchToClient }: Provide
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* ─── Top Navbar ─── */}
-      <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 sm:px-6 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-blue-600 flex items-center justify-center font-black text-white text-[20px] shadow-md shadow-blue-500/20">
-            Q
+      <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="h-10 w-auto bg-white p-1 rounded-xl border border-white/20 shadow-md flex items-center justify-center shrink-0">
+            <img
+              src="/questmore_logo.jpg"
+              alt="QuestMore Engineering Services Limited (RC: 6907014)"
+              className="h-8 w-auto object-contain"
+            />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-[16px] font-black text-white">QuestMore Provider</h1>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-[15px] font-black text-white leading-none">QuestMore Provider</h1>
+              <span className="text-[8.5px] font-mono font-black text-amber-400 bg-white/10 px-1.5 py-0.5 rounded border border-white/10">
+                RC: 6907014
+              </span>
               {isVerified ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.5 text-[10px] font-black text-emerald-400">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.5 text-[9.5px] font-black text-emerald-400">
                   <span>✓</span> VERIFIED PRO
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 text-[10px] font-black text-amber-400 animate-pulse">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 text-[9.5px] font-black text-amber-400 animate-pulse">
                   <span>⏳</span> AWAITING VERIFICATION
                 </span>
               )}
             </div>
-            <p className="text-[11.5px] text-slate-400 font-medium">
+            <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">
               {user.fullName} • {user.professionName || "Engineering Specialist"}
             </p>
           </div>
