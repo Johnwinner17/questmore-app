@@ -260,9 +260,17 @@ export async function ensureDbInitialized(): Promise<boolean> {
         ALTER TABLE service_requests ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMP;
         ALTER TABLE service_requests ADD COLUMN IF NOT EXISTS work_started_at TIMESTAMP;
         ALTER TABLE service_requests ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
+        ALTER TABLE service_requests ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMP;
+        ALTER TABLE service_requests ADD COLUMN IF NOT EXISTS work_completed_at TIMESTAMP;
+        ALTER TABLE service_requests ADD COLUMN IF NOT EXISTS quoted_cost INTEGER;
 
         ALTER TABLE banners ADD COLUMN IF NOT EXISTS link TEXT;
         ALTER TABLE banners ADD COLUMN IF NOT EXISTS link_url TEXT;
+
+        ALTER TABLE notifications ADD COLUMN IF NOT EXISTS user_email VARCHAR(255);
+        ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target VARCHAR(50) DEFAULT 'specific';
+        ALTER TABLE notifications ADD COLUMN IF NOT EXISTS user_role VARCHAR(50) DEFAULT 'client';
+        ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link_url TEXT;
       `);
 
       // 3. Auto-seed Categories if table is empty

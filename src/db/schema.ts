@@ -256,10 +256,12 @@ export const serviceAreas = pgTable("service_areas", {
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
   userId: integer("user_id"),
-  userRole: varchar("user_role", { length: 50 }).default("client"), // 'client' | 'provider' | 'admin'
+  userEmail: varchar("user_email", { length: 255 }), // targeted recipient email (null = broadcast)
+  userRole: varchar("user_role", { length: 50 }).default("client"), // 'client' | 'provider' | 'admin' | 'all'
   title: varchar("title", { length: 255 }).notNull(),
   message: text("message").notNull(),
   type: varchar("type", { length: 50 }),
+  target: varchar("target", { length: 50 }).default("specific"), // 'specific' | 'all' | 'clients' | 'providers'
   read: boolean("read").default(false),
   linkUrl: text("link_url"),
   createdAt: timestamp("created_at").defaultNow(),

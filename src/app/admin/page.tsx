@@ -16,6 +16,7 @@ type Section =
   | "subcategories"
   | "job_requests"
   | "provider_applications"
+  | "provider_management"
   | "professions"
   | "payments"
   | "settings"
@@ -147,10 +148,11 @@ const sidebarItems: { key: Section; label: string; icon: string; badgeKey?: keyo
   { key: "banners", label: "Hero Sliding Banners", icon: "🖼️" },
   { key: "notifications", label: "Notification Center", icon: "📢" },
   { key: "job_requests", label: "Job Requests & Quotes", icon: "📋", badgeKey: "pendingRequests" },
+  { key: "provider_management", label: "Provider Management", icon: "👷‍♂️", badgeKey: "providers" },
+  { key: "provider_applications", label: "Provider Applications", icon: "📝", badgeKey: "pendingApplications" },
   { key: "gallery", label: "Photo Gallery Manager", icon: "📸" },
   { key: "categories", label: "Categories", icon: "📁" },
   { key: "subcategories", label: "Subcategories", icon: "📂" },
-  { key: "provider_applications", label: "Provider Applications", icon: "👷", badgeKey: "pendingApplications" },
   { key: "professions", label: "Professions & Trades", icon: "🪚" },
   { key: "payments", label: "Payment Records", icon: "💳" },
   { key: "settings", label: "Platform Settings", icon: "⚙️" },
@@ -209,6 +211,23 @@ export default function AdminPage() {
   const [feedbackTitleInput, setFeedbackTitleInput] = useState("");
   const [bookingFeeInput, setBookingFeeInput] = useState("5000");
 
+  // ── Messaging Modal State ──
+  const [showMsgModal, setShowMsgModal] = useState(false);
+  const [msgTarget, setMsgTarget] = useState<"specific" | "all" | "clients" | "providers">("all");
+  const [msgRecipientEmail, setMsgRecipientEmail] = useState("");
+  const [msgTitle, setMsgTitle] = useState("");
+  const [msgBody, setMsgBody] = useState("");
+  const [msgSending, setMsgSending] = useState(false);
+  const [msgType, setMsgType] = useState("admin_message");
+  // Pre-fill recipient for direct message from provider/request table
+  const [msgPrefilledContext, setMsgPrefilledContext] = useState<{ name?: string; email?: string; phone?: string } | null>(null);
+
+  // ── Admin Notification Bell State ──
+  const [adminNotifs, setAdminNotifs] = useState<any[]>([]);
+  const [showAdminNotifPanel, setShowAdminNotifPanel] = useState(false);
+  const adminNotifRef = useRef<HTMLDivElement>(null);
+  const adminUnread = adminNotifs.filter((n) => !n.read).length;
+
   // Milestone Photo state
   const [milestoneStage, setMilestoneStage] = useState("work_in_progress");
   const [milestoneUrl, setMilestoneUrl] = useState("");
@@ -223,6 +242,8 @@ export default function AdminPage() {
     { key: "work_completed", label: "Work Completed" },
     { key: "completed", label: "Project Closed" },
   ];
+
+
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -259,7 +280,19 @@ export default function AdminPage() {
     api("?table=subcategories").then((res) => Array.isArray(res) && setSubOptions(res));
     api("?table=verified_providers").then((res) => Array.isArray(res) && setVerifiedProviders(res));
 
-    const statsInterval = setInterval(() => loadStats(), 30_000);
+    // Load admin notifications
+    const loadAdminNotifs = () => {
+      fetch("/api/notifications?email=questdmore@gmail.com&role=admin")
+        .then((r) => r.json())
+        .then((d) => Array.isArray(d) && setAdminNotifs(d))
+        .catch(() => {});
+    };
+    loadAdminNotifs();
+
+    const statsInterval = setInterval(() => {
+      loadStats();
+      loadAdminNotifs();
+    }, 20_000); // poll every 20s for new paid requests
     return () => clearInterval(statsInterval);
   }, [loadStats]);
 
@@ -268,6 +301,73 @@ export default function AdminPage() {
       loadData(section);
     }
   }, [section, loadData]);
+
+  // Close admin notif panel on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (adminNotifRef.current && !adminNotifRef.current.contains(e.target as Node)) {
+        setShowAdminNotifPanel(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // ── Send Message Helper ─────────────────────────────────────────────────────
+  const sendMessage = async () => {
+    if (!msgTitle.trim() || !msgBody.trim()) {
+      showToast("⚠️ Please enter a title and message");
+      return;
+    }
+    if (msgTarget === "specific" && !msgRecipientEmail.trim()) {
+      showToast("⚠️ Please enter the recipient email");
+      return;
+    }
+    setMsgSending(true);
+    try {
+      const res = await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "send_message",
+          data: {
+            title: msgTitle.trim(),
+            message: msgBody.trim(),
+            target: msgTarget,
+            recipientEmail: msgTarget === "specific" ? msgRecipientEmail.trim() : undefined,
+            type: msgType,
+          },
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast(`✅ ${result.message}`);
+        setShowMsgModal(false);
+        setMsgTitle("");
+        setMsgBody("");
+        setMsgRecipientEmail("");
+        setMsgPrefilledContext(null);
+      } else {
+        showToast("⚠️ Failed to send message");
+      }
+    } catch (e) {
+      showToast("⚠️ Error sending message");
+    } finally {
+      setMsgSending(false);
+    }
+  };
+
+  // ── Open direct message to a specific person ──────────────────────────────
+  const openDirectMessage = (context: { name?: string; email?: string; phone?: string }) => {
+    setMsgTarget("specific");
+    setMsgRecipientEmail(context.email || "");
+    setMsgPrefilledContext(context);
+    setMsgTitle("");
+    setMsgBody("");
+    setShowMsgModal(true);
+  };
+
+
 
   // ── Open Service Studio (Create or Edit) ──
   const openServiceStudio = (service?: Record<string, any>) => {
@@ -779,6 +879,93 @@ export default function AdminPage() {
               </button>
             )}
 
+            {/* ── Broadcast Message Button ── */}
+            <button
+              onClick={() => {
+                setMsgTarget("all");
+                setMsgRecipientEmail("");
+                setMsgPrefilledContext(null);
+                setShowMsgModal(true);
+              }}
+              className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-[12px] font-bold text-blue-700 hover:bg-blue-100 shadow-2xs"
+              title="Send message to users"
+            >
+              💬 Message
+            </button>
+
+            {/* ── Admin Notification Bell ── */}
+            <div className="relative" ref={adminNotifRef}>
+              <button
+                onClick={() => setShowAdminNotifPanel(!showAdminNotifPanel)}
+                className="relative flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-bold text-slate-700 hover:bg-slate-100 shadow-2xs"
+                title="Admin notifications"
+              >
+                🔔
+                {adminUnread > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-white px-0.5 animate-pulse">
+                    {adminUnread > 9 ? "9+" : adminUnread}
+                  </span>
+                )}
+              </button>
+
+              {showAdminNotifPanel && (
+                <div className="absolute right-0 top-full mt-2 w-80 sm:w-[360px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                      <p className="text-[14px] font-black text-slate-900">Admin Notifications</p>
+                      <p className="text-[11px] text-slate-400">{adminUnread} unread</p>
+                    </div>
+                    {adminUnread > 0 && (
+                      <button
+                        onClick={() => setAdminNotifs((prev) => prev.map((n) => ({ ...n, read: true })))}
+                        className="text-[11px] font-bold text-blue-500 hover:text-blue-700"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <div className="overflow-y-auto max-h-[340px] divide-y divide-slate-100">
+                    {adminNotifs.length === 0 ? (
+                      <div className="p-8 text-center">
+                        <p className="text-2xl">🔔</p>
+                        <p className="text-[13px] font-bold text-slate-400 mt-2">No notifications yet</p>
+                        <p className="text-[11px] text-slate-400 mt-1">New paid requests and updates will appear here</p>
+                      </div>
+                    ) : (
+                      adminNotifs.map((n: any) => (
+                        <div
+                          key={n.id}
+                          className={`px-4 py-3 hover:bg-slate-50 transition-all cursor-pointer ${
+                            !n.read ? "bg-red-50 border-l-2 border-l-red-400" : ""
+                          }`}
+                          onClick={() => {
+                            setAdminNotifs((prev) => prev.map((x) => x.id === n.id ? { ...x, read: true } : x));
+                            if (n.type === "new_request") { setSection("job_requests"); setShowAdminNotifPanel(false); }
+                          }}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <span className="text-[15px] shrink-0 mt-0.5">
+                              {n.type === "new_request" ? "🔴" :
+                               n.type === "payment" ? "💳" :
+                               n.type === "request_update" ? "🔧" : "🔔"}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[12.5px] font-extrabold text-slate-900 line-clamp-1">{n.title}</p>
+                              <p className="text-[11.5px] text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
+                              <p className="text-[10px] text-slate-400 mt-1">
+                                {new Date(n.createdAt || Date.now()).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}
+                              </p>
+                            </div>
+                            {!n.read && <div className="h-2 w-2 rounded-full bg-red-500 shrink-0 mt-1.5" />}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => {
                 loadStats();
@@ -791,6 +978,7 @@ export default function AdminPage() {
             </button>
           </div>
         </header>
+
 
         {/* Dynamic Section Body */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-7 space-y-6">
@@ -1470,7 +1658,7 @@ export default function AdminPage() {
                             )}
                             <button
                               onClick={() => handleDelete("users", u.id)}
-                              className="px-2 py-1 rounded-lg text-red-500 hover:bg-red-50 text-[11px] font-bold"
+                              className="px-2.5 py-1 rounded-lg text-red-500 hover:bg-red-50 text-[11px] font-bold inline-block"
                             >
                               Delete
                             </button>
@@ -1484,8 +1672,193 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* ── PROVIDER MANAGEMENT SECTION ── */}
+          {section === "provider_management" && (
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+              <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-[17px] font-black text-slate-900">Service Provider Management</h3>
+                  <p className="text-[12px] text-slate-500 font-medium">Verify, assign, message, and manage all service providers</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setMsgTarget("providers"); setMsgPrefilledContext(null); setShowMsgModal(true); }}
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-black flex items-center gap-1.5"
+                  >
+                    📢 Message All Providers
+                  </button>
+                  <button
+                    onClick={() => loadData("provider_management")}
+                    className="px-3 py-2 rounded-xl border border-slate-200 text-[12px] font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    🔄
+                  </button>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="p-8 text-center text-slate-400 animate-pulse">Loading providers...</div>
+              ) : data.length === 0 ? (
+                <div className="p-12 text-center">
+                  <p className="text-3xl mb-2">👷</p>
+                  <p className="text-[15px] font-black text-slate-700">No providers registered yet</p>
+                  <p className="text-[12px] text-slate-400 mt-1">Providers who register through the app will appear here</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {data.map((prov: any) => {
+                    const statusColor =
+                      prov.verificationStatus === "verified"
+                        ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                        : prov.verificationStatus === "rejected"
+                        ? "bg-red-100 text-red-700 border-red-200"
+                        : prov.verificationStatus === "suspended"
+                        ? "bg-orange-100 text-orange-700 border-orange-200"
+                        : "bg-amber-100 text-amber-700 border-amber-200";
+
+                    return (
+                      <div key={prov.id} className="p-4 sm:p-5 hover:bg-slate-50 transition-all">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                          {/* Avatar + Name */}
+                          <div className="flex items-center gap-3 flex-1">
+                            <div className="h-12 w-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white font-black text-[18px] shrink-0">
+                              {prov.fullName?.[0]?.toUpperCase() || "?"}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-[14px] font-black text-slate-900">{prov.fullName || "Unknown Provider"}</p>
+                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${statusColor}`}>
+                                  {prov.verificationStatus?.toUpperCase() || "PENDING"}
+                                </span>
+                              </div>
+                              <p className="text-[12px] text-slate-500 font-medium">{prov.professionName || "Service Specialist"}</p>
+                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[11.5px] text-slate-400">
+                                {prov.email && <span>✉️ {prov.email}</span>}
+                                {prov.phone && <span>📞 {prov.phone}</span>}
+                                {prov.location && <span>📍 {prov.location}</span>}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Job Stats */}
+                          <div className="flex gap-3 text-center shrink-0">
+                            <div className="bg-slate-50 rounded-xl px-3 py-2 border border-slate-200">
+                              <p className="text-[18px] font-black text-slate-900">{prov.totalJobs || 0}</p>
+                              <p className="text-[9px] font-bold text-slate-400 uppercase">Total</p>
+                            </div>
+                            <div className="bg-blue-50 rounded-xl px-3 py-2 border border-blue-100">
+                              <p className="text-[18px] font-black text-blue-700">{prov.activeJobs || 0}</p>
+                              <p className="text-[9px] font-bold text-blue-400 uppercase">Active</p>
+                            </div>
+                            <div className="bg-emerald-50 rounded-xl px-3 py-2 border border-emerald-100">
+                              <p className="text-[18px] font-black text-emerald-700">{prov.completedJobs || 0}</p>
+                              <p className="text-[9px] font-bold text-emerald-400 uppercase">Done</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Actions Row */}
+                        <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                          {/* Verify/Reject/Suspend */}
+                          {prov.verificationStatus !== "verified" && (
+                            <button
+                              onClick={async () => {
+                                await api("", {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ table: "provider_management", id: prov.id, data: { verificationStatus: "verified" } }),
+                                });
+                                showToast(`✅ ${prov.fullName} verified! They've been notified.`);
+                                loadData("provider_management");
+                                loadStats();
+                              }}
+                              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11.5px] font-black"
+                            >
+                              ✓ Verify
+                            </button>
+                          )}
+                          {prov.verificationStatus === "verified" && (
+                            <button
+                              onClick={async () => {
+                                await api("", {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ table: "provider_management", id: prov.id, data: { verificationStatus: "suspended", adminNote: "Account suspended by admin. Please contact support." } }),
+                                });
+                                showToast(`⚠️ ${prov.fullName} suspended.`);
+                                loadData("provider_management");
+                              }}
+                              className="px-3 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[11.5px] font-black"
+                            >
+                              ⏸ Suspend
+                            </button>
+                          )}
+                          {prov.verificationStatus !== "rejected" && prov.verificationStatus !== "verified" && (
+                            <button
+                              onClick={async () => {
+                                const reason = prompt(`Rejection reason for ${prov.fullName}:`);
+                                if (!reason) return;
+                                await api("", {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ table: "provider_management", id: prov.id, data: { verificationStatus: "rejected", adminNote: reason } }),
+                                });
+                                showToast(`❌ ${prov.fullName} application rejected. Provider notified.`);
+                                loadData("provider_management");
+                              }}
+                              className="px-3 py-1.5 rounded-xl border border-red-200 text-red-600 text-[11.5px] font-bold hover:bg-red-50"
+                            >
+                              ✕ Reject
+                            </button>
+                          )}
+
+                          {/* Direct Message */}
+                          <button
+                            onClick={() => openDirectMessage({ name: prov.fullName, email: prov.email, phone: prov.phone })}
+                            className="px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-[11.5px] font-bold hover:bg-blue-100"
+                          >
+                            💬 Direct Message
+                          </button>
+
+                          {/* WhatsApp */}
+                          {prov.phone && (
+                            <a
+                              href={`https://wa.me/${prov.phone.replace(/[^0-9]/g, "")}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11.5px] font-bold hover:bg-emerald-100"
+                            >
+                              📱 WhatsApp
+                            </a>
+                          )}
+
+                          {/* View Jobs */}
+                          <button
+                            onClick={() => {
+                              setSection("job_requests");
+                            }}
+                            className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 text-[11.5px] font-bold hover:bg-slate-50"
+                          >
+                            📋 View Jobs ({prov.totalJobs || 0})
+                          </button>
+
+                          {/* Joined Date */}
+                          {prov.createdAt && (
+                            <span className="text-[10.5px] text-slate-400 ml-auto">
+                              Joined {new Date(prov.createdAt).toLocaleDateString("en-NG", { dateStyle: "medium" })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 7. ALL OTHER SECTIONS */}
-          {!["dashboard", "services", "banners", "job_requests", "notifications", "users"].includes(section) && (
+          {!["dashboard", "services", "banners", "job_requests", "notifications", "users", "provider_management"].includes(section) && (
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-[16px] font-black text-slate-900 capitalize">{section.replace(/_/g, " ")}</h3>
@@ -2477,6 +2850,135 @@ export default function AdminPage() {
               >
                 {milestoneUploading ? "Uploading..." : "📸 Upload Photo"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MESSAGING MODAL ─── */}
+      {showMsgModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 bg-slate-950 flex items-center justify-between">
+              <div>
+                <h3 className="text-[16px] font-black text-white">
+                  💬 {msgTarget === "specific" ? "Direct Message" : "Broadcast Message"}
+                </h3>
+                {msgPrefilledContext?.name && (
+                  <p className="text-[11px] text-amber-400 font-bold mt-0.5">
+                    To: {msgPrefilledContext.name} ({msgPrefilledContext.email})
+                  </p>
+                )}
+              </div>
+              <button onClick={() => setShowMsgModal(false)} className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20">✕</button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Target Audience */}
+              <div>
+                <label className="block text-[12px] font-bold text-slate-700 mb-2">Send To</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: "all", label: "📢 Everyone", desc: "All users" },
+                    { key: "clients", label: "👤 All Clients", desc: "Clients only" },
+                    { key: "providers", label: "👷 All Providers", desc: "Providers only" },
+                    { key: "specific", label: "✉️ Specific Person", desc: "One recipient" },
+                  ].map((t) => (
+                    <button
+                      key={t.key}
+                      onClick={() => setMsgTarget(t.key as typeof msgTarget)}
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        msgTarget === t.key
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      <p className="text-[12.5px] font-extrabold text-slate-900">{t.label}</p>
+                      <p className="text-[10.5px] text-slate-400">{t.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Specific recipient email */}
+              {msgTarget === "specific" && (
+                <div>
+                  <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Recipient Email</label>
+                  <input
+                    type="email"
+                    value={msgRecipientEmail}
+                    onChange={(e) => setMsgRecipientEmail(e.target.value)}
+                    placeholder="client@example.com"
+                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-[13px] outline-none focus:border-blue-500"
+                  />
+                  {msgPrefilledContext?.phone && (
+                    <a
+                      href={`https://wa.me/${msgPrefilledContext.phone.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 mt-2 text-[12px] font-bold text-emerald-600 hover:text-emerald-700"
+                    >
+                      💬 Also send via WhatsApp: {msgPrefilledContext.phone}
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* Message Type */}
+              <div>
+                <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Message Type</label>
+                <select
+                  value={msgType}
+                  onChange={(e) => setMsgType(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-[13px] bg-white outline-none focus:border-blue-500"
+                >
+                  <option value="admin_message">📋 General Message</option>
+                  <option value="announcement">📢 Announcement</option>
+                  <option value="request_update">🔧 Job Status Update</option>
+                  <option value="promo">🎁 Promotion / Offer</option>
+                  <option value="alert">⚠️ Important Alert</option>
+                </select>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Message Title</label>
+                <input
+                  type="text"
+                  value={msgTitle}
+                  onChange={(e) => setMsgTitle(e.target.value)}
+                  placeholder="e.g. Update on your QuestMore Request"
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-[13px] outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {/* Message Body */}
+              <div>
+                <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Message Body</label>
+                <textarea
+                  rows={4}
+                  value={msgBody}
+                  onChange={(e) => setMsgBody(e.target.value)}
+                  placeholder="Type your message here..."
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-[13px] outline-none focus:border-blue-500 resize-none"
+                />
+              </div>
+
+              <div className="flex gap-2.5 pt-1">
+                <button
+                  onClick={() => setShowMsgModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-[13px] font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={sendMessage}
+                  disabled={msgSending}
+                  className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-extrabold shadow-md disabled:opacity-50"
+                >
+                  {msgSending ? "Sending..." : msgTarget === "specific" ? "📨 Send Direct Message" : "📢 Broadcast Now"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

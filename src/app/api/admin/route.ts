@@ -12,7 +12,7 @@ import { alertJobStatusUpdate, alertMilestonePhoto } from "@/lib/whatsapp";
 export const dynamic = "force-dynamic";
 
 
-// Helper to push notification to client
+// Helper to push notification to a specific user or broadcast
 async function dispatchNotification({
   userId,
   userEmail,
@@ -20,6 +20,7 @@ async function dispatchNotification({
   message,
   type = "request_update",
   requestId,
+  target = "specific",
 }: {
   userId?: number | null;
   userEmail?: string | null;
@@ -27,14 +28,16 @@ async function dispatchNotification({
   message: string;
   type?: string;
   requestId?: number | null;
+  target?: string;
 }) {
   const notifObj = {
-    id: Date.now(),
+    id: Date.now() + Math.random(),
     userId: userId || null,
-    userEmail: userEmail || null,
+    userEmail: userEmail ? userEmail.toLowerCase().trim() : null,
     title,
     message,
     type,
+    target: userEmail ? "specific" : (target || "all"),
     requestId: requestId || null,
     read: false,
     createdAt: new Date().toISOString(),
@@ -43,12 +46,17 @@ async function dispatchNotification({
   try {
     await db.insert(notifications).values({
       userId: notifObj.userId,
+      userEmail: notifObj.userEmail,
       title: notifObj.title,
       message: notifObj.message,
       type: notifObj.type,
+      target: notifObj.target,
       read: false,
+      linkUrl: requestId ? `/activity` : null,
     });
-  } catch (e) {}
+  } catch (e) {
+    console.warn("Notification DB insert warning:", e);
+  }
 
   if (!(serverStore as any).notifications) {
     (serverStore as any).notifications = [];
@@ -140,6 +148,56 @@ export async function GET(req: NextRequest) {
           if (provs && provs.length > 0) return NextResponse.json(provs);
         } catch (e) {}
         return NextResponse.json(serverStore.users.filter(u => u.role === "provider"));
+      }
+
+      case "provider_management": {
+        // Returns ALL providers with their job counts, assignment history, and full contact details
+        try {
+          const allProviders = await db
+            .select()
+            .from(users)
+            .where(eq(users.role, "provider"))
+            .orderBy(desc(users.createdAt));
+
+          // Enrich each provider with job counts
+          const allRequests = await db.select({
+            id: serviceRequests.id,
+            assignedProviderId: serviceRequests.assignedProviderId,
+            jobStatus: serviceRequests.jobStatus,
+          }).from(serviceRequests);
+
+          const enriched = allProviders.map((p: any) => {
+            const provJobs = allRequests.filter((r: any) => r.assignedProviderId === p.id);
+            return {
+              ...p,
+              totalJobs: provJobs.length,
+              activeJobs: provJobs.filter((r: any) =>
+                ["provider_assigned", "provider_accepted", "work_in_progress"].includes(r.jobStatus || "")
+              ).length,
+              completedJobs: provJobs.filter((r: any) =>
+                ["work_completed", "completed"].includes(r.jobStatus || "")
+              ).length,
+              whatsappUrl: p.phone ? `https://wa.me/${(p.phone || "").replace(/[^0-9]/g, "")}` : null,
+            };
+          });
+
+          if (enriched.length > 0) return NextResponse.json(enriched);
+        } catch (e) {
+          console.error("provider_management fetch error:", e);
+        }
+
+        // Fallback
+        const storeProviders = serverStore.users.filter((u: any) => u.role === "provider").map((p: any) => {
+          const provJobs = serverStore.requests.filter((r: any) => r.assignedProviderId === p.id);
+          return {
+            ...p,
+            totalJobs: provJobs.length,
+            activeJobs: provJobs.filter((r: any) => ["provider_assigned", "provider_accepted", "work_in_progress"].includes(r.jobStatus || "")).length,
+            completedJobs: provJobs.filter((r: any) => ["work_completed", "completed"].includes(r.jobStatus || "")).length,
+            whatsappUrl: p.phone ? `https://wa.me/${(p.phone || "").replace(/[^0-9]/g, "")}` : null,
+          };
+        });
+        return NextResponse.json(storeProviders);
       }
 
       case "verified_providers": {
@@ -407,7 +465,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { table, data, photos, action } = body;
 
-    // Send direct client feedback
+    // ── Send direct client feedback or direct/broadcast message ─────────────
     if (action === "send_feedback" || table === "send_feedback") {
       const { requestId, userEmail, clientName, title, message, type = "admin_feedback" } = data;
       await dispatchNotification({
@@ -418,7 +476,6 @@ export async function POST(req: NextRequest) {
         requestId,
       });
 
-      // Also update status note in the request if present
       if (requestId) {
         serverStore.requests = serverStore.requests.map(r =>
           r.id === Number(requestId) ? { ...r, statusNote: message } : r
@@ -430,6 +487,66 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({ success: true, message: "Feedback sent directly to client notification center" });
     }
+
+    // ── Admin direct / broadcast messaging ──────────────────────────────────
+    if (action === "send_message" || table === "send_message") {
+      const {
+        title,
+        message,
+        recipientEmail,
+        recipientId,
+        target = "specific",   // 'specific' | 'all' | 'clients' | 'providers'
+        type = "admin_message",
+      } = data;
+
+      if (target === "specific" && recipientEmail) {
+        // Direct message to one person
+        await dispatchNotification({
+          userEmail: recipientEmail,
+          userId: recipientId ? Number(recipientId) : null,
+          title: title || "Message from QuestMore Admin",
+          message: message || "",
+          type,
+          target: "specific",
+        });
+        return NextResponse.json({ success: true, message: `Direct message sent to ${recipientEmail}` });
+      } else {
+        // Broadcast: get all target users and create one broadcast notification
+        const broadcastRecord = {
+          id: Date.now() + Math.random(),
+          userId: null,
+          userEmail: null,
+          userRole: target === "clients" ? "client" : target === "providers" ? "provider" : "all",
+          title: title || "Announcement from QuestMore",
+          message: message || "",
+          type,
+          target,
+          read: false,
+          createdAt: new Date().toISOString(),
+        };
+
+        try {
+          await db.insert(notifications).values({
+            userId: null,
+            userEmail: null,
+            userRole: broadcastRecord.userRole,
+            title: broadcastRecord.title,
+            message: broadcastRecord.message,
+            type: broadcastRecord.type,
+            target,
+            read: false,
+          });
+        } catch (e) {
+          console.warn("Broadcast notification DB warning:", e);
+        }
+
+        if (!(serverStore as any).notifications) (serverStore as any).notifications = [];
+        (serverStore as any).notifications.unshift(broadcastRecord);
+
+        return NextResponse.json({ success: true, message: `Broadcast sent to all ${target === "all" ? "users" : target}` });
+      }
+    }
+
 
     switch (table) {
       case "services": {
@@ -667,6 +784,7 @@ export async function PUT(req: NextRequest) {
     const { table, id, data } = body;
 
     switch (table) {
+      case "provider_management":
       case "provider_applications":
       case "users": {
         const updateFields: Record<string, any> = {};
@@ -685,21 +803,45 @@ export async function PUT(req: NextRequest) {
             .update(users)
             .set(updateFields)
             .where(eq(users.id, Number(id)));
-        } catch (e) {}
+        } catch (e) {
+          console.error("DB update user error:", e);
+        }
 
         serverStore.users = serverStore.users.map(u =>
           u.id === Number(id) ? { ...u, ...updateFields } : u
         );
 
-        // If provider was approved, notify them
-        if (data.verificationStatus === "verified") {
-          const prov = serverStore.users.find(u => u.id === Number(id));
-          if (prov?.email) {
+        // Look up target provider
+        let targetUser: any = serverStore.users.find(u => u.id === Number(id));
+        if (!targetUser) {
+          try {
+            const found = await db.select().from(users).where(eq(users.id, Number(id))).limit(1);
+            targetUser = found[0];
+          } catch (e) {}
+        }
+
+        // Notify provider based on status change
+        if (targetUser?.email) {
+          if (data.verificationStatus === "verified") {
             await dispatchNotification({
-              userEmail: prov.email,
-              title: "Trade Certification Verified! 🎉",
-              message: "Congratulations! Your QuestMore service provider credentials have been verified. You are now eligible for specialist job dispatch.",
-              type: "announcement",
+              userEmail: targetUser.email,
+              title: "🎉 Trade Certification Verified!",
+              message: `Congratulations ${targetUser.fullName || ""}! Your QuestMore service provider credentials have been verified. You are now eligible for specialist job assignments. Check your Provider Dashboard.`,
+              type: "verification",
+            });
+          } else if (data.verificationStatus === "rejected") {
+            await dispatchNotification({
+              userEmail: targetUser.email,
+              title: "Application Update from QuestMore Admin",
+              message: data.adminNote || "Unfortunately your application could not be verified at this time. Please contact support with updated credentials.",
+              type: "verification",
+            });
+          } else if (data.verificationStatus === "suspended") {
+            await dispatchNotification({
+              userEmail: targetUser.email,
+              title: "Account Temporarily Suspended",
+              message: data.adminNote || "Your QuestMore service provider account has been suspended. Please contact our admin team for more details.",
+              type: "alert",
             });
           }
         }

@@ -99,29 +99,34 @@ export async function POST(req: NextRequest) {
         insertedId = inserted.id;
       }
 
-      // Create Admin & Client Notification
+      // Create Client Notification (in their bell)
       try {
-        await db.insert(notifications).values([
-          {
-            userId: userId ? Number(userId) : null,
-            userRole: "client",
-            title: "Request Received & Pending Review",
-            message: `Your service request ${requestCode} (₦${totalAmount.toLocaleString()}) has been received. Admin is reviewing scope.`,
-            type: "payment",
-            linkUrl: "/activity",
-          },
-          {
-            userId: 1, // Admin
-            userRole: "admin",
-            title: "New Client Request Pending Review",
-            message: `Client ${fullName} submitted request ${requestCode} (₦${totalAmount.toLocaleString()}).`,
-            type: "request",
-            linkUrl: "/admin",
-          },
-        ]);
-      } catch (notifErr) {
-        // Continue
-      }
+        await db.insert(notifications).values({
+          userId: userId ? Number(userId) : null,
+          userEmail: email ? email.toLowerCase().trim() : null,
+          userRole: "client",
+          title: "✅ Request Received & Pending Review",
+          message: `Your service request ${requestCode} has been received. Booking fee of ₦${BOOKING_FEE.toLocaleString()} confirmed. Admin is reviewing your scope.`,
+          type: "payment",
+          target: "specific",
+          linkUrl: "/activity",
+        });
+      } catch (notifErr) {}
+
+      // Create Admin Notification (in admin's bell — they must see new paid requests instantly!)
+      try {
+        await db.insert(notifications).values({
+          userId: null,
+          userEmail: "questdmore@gmail.com",
+          userRole: "admin",
+          title: `🔴 NEW PAID REQUEST — ₦${BOOKING_FEE.toLocaleString()} Received!`,
+          message: `Client ${fullName} (${phone || email}) submitted request ${requestCode} for ₦${totalAmount.toLocaleString()}. Booking fee of ₦${BOOKING_FEE.toLocaleString()} paid. Please review and assign a specialist.`,
+          type: "new_request",
+          target: "specific",
+          linkUrl: "/admin",
+        });
+      } catch (notifErr) {}
+
     } catch (insertErr) {
       console.warn("DB insert fallback in /api/request:", insertErr);
     }
@@ -134,6 +139,34 @@ export async function POST(req: NextRequest) {
 
     // Store in global store so Admin and Activity tab instantly access it
     serverStore.requests.unshift(savedRecord as any);
+
+    // Push admin alert into serverStore (visible in admin notification bell instantly)
+    if (!(serverStore as any).notifications) (serverStore as any).notifications = [];
+    (serverStore as any).notifications.unshift({
+      id: Date.now(),
+      userId: null,
+      userEmail: "questdmore@gmail.com",
+      userRole: "admin",
+      title: `🔴 NEW PAID REQUEST — ₦${(serverStore.bookingFee || 5000).toLocaleString()} Received!`,
+      message: `Client ${fullName} (${phone || email}) submitted ${requestCode}. Review and assign a specialist now.`,
+      type: "new_request",
+      target: "specific",
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+    // Push client confirmation into serverStore
+    (serverStore as any).notifications.unshift({
+      id: Date.now() + 1,
+      userId: userId || null,
+      userEmail: email ? email.toLowerCase().trim() : null,
+      userRole: "client",
+      title: "✅ Request Received & Pending Review",
+      message: `Your service request ${requestCode} has been received. Booking fee confirmed. Admin is reviewing your scope.`,
+      type: "payment",
+      target: "specific",
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
 
     // ── WhatsApp / SMS Alerts ───────────────────────────────
     // Fire-and-forget: don't block the response on alert delivery
