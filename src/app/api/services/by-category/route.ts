@@ -26,14 +26,16 @@ export async function GET(req: NextRequest) {
       )
       .orderBy(asc(services.sortOrder));
 
-    if (data && data.length > 0) {
+    if (Array.isArray(data)) {
       return NextResponse.json(data);
     }
   } catch (e) {
     console.error("by-category DB error:", e);
   }
 
-  // Fallback to serverStore (has all 16 services)
-  const filtered = serverStore.services.filter(s => s.categoryId === Number(categoryId));
-  return NextResponse.json(filtered.length > 0 ? filtered : serverStore.services);
+  // Fallback to serverStore if DB unavailable
+  const filtered = serverStore.services.filter(
+    (s) => s.categoryId === Number(categoryId) && s.active !== false
+  );
+  return NextResponse.json(filtered);
 }

@@ -398,9 +398,9 @@ export async function GET(req: NextRequest) {
       case "users": {
         try {
           const u = await db.select().from(users).orderBy(desc(users.createdAt));
-          if (u && u.length > 0) return NextResponse.json(u);
+          if (u && u.length > 0) return NextResponse.json(u.map(user => sanitizeUser(user)));
         } catch (e) {}
-        return NextResponse.json(serverStore.users);
+        return NextResponse.json(serverStore.users.map(user => sanitizeUser(user)));
       }
 
       case "faqs": {
@@ -792,11 +792,14 @@ export async function PUT(req: NextRequest) {
           updateFields.verificationStatus = data.verificationStatus;
           updateFields.verified = data.verificationStatus === "verified";
         }
+        if (data.status) updateFields.status = data.status;
         if (data.role) updateFields.role = data.role;
         if (data.fullName) updateFields.fullName = data.fullName;
         if (data.phone) updateFields.phone = data.phone;
         if (data.location) updateFields.location = data.location;
+        if (data.address) updateFields.address = data.address;
         if (data.professionName) updateFields.professionName = data.professionName;
+        updateFields.updatedAt = new Date();
 
         try {
           await db
@@ -1060,6 +1063,49 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ success: true });
       }
 
+      case "categories": {
+        const updateFields: Record<string, any> = {};
+        if (data.name) updateFields.name = data.name;
+        if (data.slug) updateFields.slug = data.slug;
+        if (data.description !== undefined) updateFields.description = data.description;
+        if (data.icon !== undefined) updateFields.icon = data.icon;
+        if (data.imageUrl !== undefined) updateFields.imageUrl = data.imageUrl;
+        if (data.sortOrder !== undefined) updateFields.sortOrder = Number(data.sortOrder);
+        if (data.active !== undefined) updateFields.active = data.active === "true" || data.active === true;
+
+        try {
+          await db.update(categories).set(updateFields).where(eq(categories.id, Number(id)));
+        } catch (e) {
+          console.error("DB update category error:", e);
+        }
+
+        serverStore.categories = serverStore.categories.map(c =>
+          c.id === Number(id) ? { ...c, ...updateFields } : c
+        );
+        return NextResponse.json({ success: true });
+      }
+
+      case "subcategories": {
+        const updateFields: Record<string, any> = {};
+        if (data.name) updateFields.name = data.name;
+        if (data.slug) updateFields.slug = data.slug;
+        if (data.description !== undefined) updateFields.description = data.description;
+        if (data.categoryId) updateFields.categoryId = Number(data.categoryId);
+        if (data.sortOrder !== undefined) updateFields.sortOrder = Number(data.sortOrder);
+        if (data.active !== undefined) updateFields.active = data.active === "true" || data.active === true;
+
+        try {
+          await db.update(subcategories).set(updateFields).where(eq(subcategories.id, Number(id)));
+        } catch (e) {
+          console.error("DB update subcategory error:", e);
+        }
+
+        serverStore.subcategories = serverStore.subcategories.map(s =>
+          s.id === Number(id) ? { ...s, ...updateFields } : s
+        );
+        return NextResponse.json({ success: true });
+      }
+
       case "settings": {
         if (data.bookingFee) {
           serverStore.bookingFee = Number(data.bookingFee);
@@ -1089,6 +1135,10 @@ export async function DELETE(req: NextRequest) {
 
   try {
     switch (table) {
+      case "users":
+        try { await db.delete(users).where(eq(users.id, numId)); } catch (e) {}
+        serverStore.users = serverStore.users.filter(u => u.id !== numId);
+        break;
       case "services":
         try { await db.delete(services).where(eq(services.id, numId)); } catch (e) {}
         serverStore.services = serverStore.services.filter(s => s.id !== numId);

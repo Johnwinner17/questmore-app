@@ -14,9 +14,9 @@ export async function GET() {
       .from(categories)
       .where(eq(categories.active, true))
       .orderBy(asc(categories.sortOrder));
-    if (data && data.length > 0) return NextResponse.json(data);
+    if (Array.isArray(data)) return NextResponse.json(data);
   } catch (e) {
     console.error("categories DB error:", e);
   }
-  return NextResponse.json(serverStore.categories);
+  return NextResponse.json(serverStore.categories.filter((c) => c.active !== false));
 }

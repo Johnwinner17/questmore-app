@@ -116,8 +116,11 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 50 }).default("client"), // 'client' | 'provider' | 'admin'
   fullName: varchar("full_name", { length: 255 }),
   email: varchar("email", { length: 255 }).unique(),
-  phone: varchar("phone", { length: 50 }).unique(),
-  passwordHash: varchar("password_hash", { length: 255 }), // for service providers
+  phone: varchar("phone", { length: 50 }),
+  passwordHash: varchar("password_hash", { length: 255 }), // securely hashed password (for clients and providers)
+  googleId: varchar("google_id", { length: 255 }), // Google OAuth provider ID
+  googleEmail: varchar("google_email", { length: 255 }), // Verified Google email
+  status: varchar("status", { length: 50 }).default("active"), // 'active' | 'suspended' | 'deactivated'
   avatarUrl: text("avatar_url"),
   location: varchar("location", { length: 255 }),
   address: text("address"),
@@ -131,7 +134,9 @@ export const users = pgTable("users", {
   // Verification: 'awaiting_verification' | 'verified' | 'rejected' | 'suspended'
   verificationStatus: varchar("verification_status", { length: 50 }).default("awaiting_verification"),
   verified: boolean("verified").default(false),
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // User addresses

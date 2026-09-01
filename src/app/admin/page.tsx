@@ -369,6 +369,106 @@ export default function AdminPage() {
 
 
 
+  // ── Category Modal State ──
+  const [categoryModal, setCategoryModal] = useState<{
+    open: boolean;
+    mode: "create" | "edit";
+    item?: Record<string, any>;
+  }>({ open: false, mode: "create" });
+  const [categoryNameInput, setCategoryNameInput] = useState("");
+  const [categorySlugInput, setCategorySlugInput] = useState("");
+  const [categoryDescInput, setCategoryDescInput] = useState("");
+  const [categoryIconInput, setCategoryIconInput] = useState("building");
+  const [categoryImageInput, setCategoryImageInput] = useState("");
+  const [categorySortOrderInput, setCategorySortOrderInput] = useState("0");
+  const [categoryActiveInput, setCategoryActiveInput] = useState(true);
+
+  // ── Users Filters ──
+  const [userRoleFilter, setUserRoleFilter] = useState<string>("all");
+  const [userStatusFilter, setUserStatusFilter] = useState<string>("all");
+
+  const openCreateCategory = () => {
+    setCategoryNameInput("");
+    setCategorySlugInput("");
+    setCategoryDescInput("");
+    setCategoryIconInput("building");
+    setCategoryImageInput("");
+    setCategorySortOrderInput(String(catOptions.length + 1));
+    setCategoryActiveInput(true);
+    setCategoryModal({ open: true, mode: "create" });
+  };
+
+  const openEditCategory = (cat: Record<string, any>) => {
+    setCategoryNameInput(cat.name || "");
+    setCategorySlugInput(cat.slug || "");
+    setCategoryDescInput(cat.description || "");
+    setCategoryIconInput(cat.icon || "building");
+    setCategoryImageInput(cat.imageUrl || "");
+    setCategorySortOrderInput(String(cat.sortOrder || 0));
+    setCategoryActiveInput(cat.active !== false);
+    setCategoryModal({ open: true, mode: "edit", item: cat });
+  };
+
+  const handleSaveCategory = async () => {
+    if (!categoryNameInput.trim()) {
+      showToast("⚠️ Category name is required");
+      return;
+    }
+    setSaving(true);
+    const slug = categorySlugInput.trim() || categoryNameInput.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const payload = {
+      name: categoryNameInput.trim(),
+      slug,
+      description: categoryDescInput.trim() || null,
+      icon: categoryIconInput,
+      imageUrl: categoryImageInput.trim() || null,
+      sortOrder: Number(categorySortOrderInput) || 0,
+      active: categoryActiveInput,
+    };
+
+    try {
+      if (categoryModal.mode === "edit" && categoryModal.item?.id) {
+        await api("", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ table: "categories", id: categoryModal.item.id, data: payload }),
+        });
+        showToast("✓ Category updated successfully in PostgreSQL!");
+      } else {
+        await api("", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ table: "categories", data: payload }),
+        });
+        showToast("✓ New category created in PostgreSQL & live on app!");
+      }
+      setCategoryModal({ open: false, mode: "create" });
+      loadData("categories");
+      api("?table=categories").then((res) => Array.isArray(res) && setCatOptions(res));
+      loadStats();
+    } catch (e: any) {
+      showToast("⚠️ Error saving category");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleCategoryActive = async (cat: Record<string, any>) => {
+    const newStatus = cat.active === false ? true : false;
+    try {
+      await api("", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "categories", id: cat.id, data: { active: newStatus } }),
+      });
+      setData((prev) => prev.map((c) => (c.id === cat.id ? { ...c, active: newStatus } : c)));
+      showToast(`Category "${cat.name}" set to ${newStatus ? "ACTIVE" : "INACTIVE"}`);
+      api("?table=categories").then((res) => Array.isArray(res) && setCatOptions(res));
+    } catch (e) {
+      showToast("Failed to toggle category status");
+    }
+  };
+
   // ── Open Service Studio (Create or Edit) ──
   const openServiceStudio = (service?: Record<string, any>) => {
     setCategoryDropdownOpen(false);
@@ -856,6 +956,15 @@ export default function AdminPage() {
                 className="btn-pro-amber px-4 py-2 rounded-xl text-[12.5px] font-black shadow-sm flex items-center gap-1.5"
               >
                 <span>+ Add Sliding Banner</span>
+              </button>
+            )}
+
+            {section === "categories" && (
+              <button
+                onClick={openCreateCategory}
+                className="btn-pro-amber px-4 py-2 rounded-xl text-[12.5px] font-black shadow-sm flex items-center gap-1.5"
+              >
+                <span>+ Add Category</span>
               </button>
             )}
 
@@ -1585,88 +1694,347 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* 6. USERS & CLIENTS */}
+          {/* ── 6. USERS MANAGEMENT (REAL POSTGRESQL USERS) ── */}
           {section === "users" && (
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                 <div>
-                  <h3 className="text-[16px] font-black text-slate-900">Registered Users & Clients ({data.length})</h3>
-                  <p className="text-[11.5px] text-slate-500">Permanently saved Google accounts, contact phone numbers, and profile locations in PostgreSQL</p>
+                  <h3 className="text-[17px] font-black text-slate-900">User Accounts & Clients Management ({data.length})</h3>
+                  <p className="text-[12px] text-slate-500 font-medium">All registered client and provider profiles saved in PostgreSQL database</p>
                 </div>
-                <button
-                  onClick={() => exportToCSV(data, "questmore_registered_users")}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 text-[12px] font-bold hover:bg-slate-50"
-                >
-                  📥 Export CSV
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => exportToCSV(data, "questmore_users")}
+                    className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-700 text-[12px] font-bold hover:bg-slate-50 shadow-2xs"
+                  >
+                    📥 Export CSV
+                  </button>
+                  <button
+                    onClick={() => loadData("users")}
+                    className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-700 text-[12px] font-bold hover:bg-slate-50 shadow-2xs"
+                  >
+                    🔄 Refresh
+                  </button>
+                </div>
+              </div>
+
+              {/* Search & Filters */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="relative sm:col-span-1">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by name, email, or phone..."
+                    className="w-full pl-3.5 pr-3 py-2 rounded-xl border border-slate-200 text-[12.5px] outline-none focus:border-amber-500 bg-slate-50/50"
+                  />
+                </div>
+                <div>
+                  <select
+                    value={userRoleFilter}
+                    onChange={(e) => setUserRoleFilter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-[12.5px] font-bold bg-white outline-none focus:border-amber-500"
+                  >
+                    <option value="all">All Roles (Clients, Providers, Admins)</option>
+                    <option value="client">Clients Only</option>
+                    <option value="provider">Service Providers Only</option>
+                    <option value="admin">Administrators Only</option>
+                  </select>
+                </div>
+                <div>
+                  <select
+                    value={userStatusFilter}
+                    onChange={(e) => setUserStatusFilter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-[12.5px] font-bold bg-white outline-none focus:border-amber-500"
+                  >
+                    <option value="all">All Account Statuses</option>
+                    <option value="active">Active Accounts Only</option>
+                    <option value="suspended">Suspended Accounts Only</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Filtered Data */}
+              {(() => {
+                const filteredUsers = data.filter((u: any) => {
+                  const q = searchQuery.toLowerCase();
+                  const matchesSearch =
+                    !q ||
+                    (u.fullName && u.fullName.toLowerCase().includes(q)) ||
+                    (u.email && u.email.toLowerCase().includes(q)) ||
+                    (u.phone && u.phone.includes(q)) ||
+                    (u.location && u.location.toLowerCase().includes(q));
+
+                  const matchesRole = userRoleFilter === "all" || (u.role || "client") === userRoleFilter;
+                  const matchesStatus = userStatusFilter === "all" || (u.status || "active") === userStatusFilter;
+                  return matchesSearch && matchesRole && matchesStatus;
+                });
+
+                if (loading) {
+                  return <div className="p-8 text-center text-slate-400 animate-pulse">Loading user records from PostgreSQL...</div>;
+                }
+
+                if (filteredUsers.length === 0) {
+                  return (
+                    <div className="p-12 text-center text-slate-500">
+                      <p className="text-3xl mb-2">👥</p>
+                      <p className="font-extrabold text-[15px] text-slate-700">No users match your filter criteria</p>
+                      <p className="text-[12px] text-slate-400 mt-1">Try changing your search query or role filter</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[12px]">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-[10.5px] font-extrabold uppercase text-slate-500 tracking-wider text-left">
+                          <th className="px-3.5 py-3">ID & User</th>
+                          <th className="px-3.5 py-3">Role</th>
+                          <th className="px-3.5 py-3">Google Auth</th>
+                          <th className="px-3.5 py-3">Phone</th>
+                          <th className="px-3.5 py-3">Location</th>
+                          <th className="px-3.5 py-3">Status</th>
+                          <th className="px-3.5 py-3">Registered / Login</th>
+                          <th className="px-3.5 py-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredUsers.map((u: any) => {
+                          const isSuspended = u.status === "suspended";
+                          return (
+                            <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="px-3.5 py-3 flex items-center gap-2.5">
+                                <span className="font-mono text-[10px] text-slate-400 font-bold">#{u.id}</span>
+                                <div className="h-8 w-8 rounded-full bg-slate-800 text-white font-black text-xs flex items-center justify-center shrink-0 overflow-hidden">
+                                  {u.avatarUrl ? <img src={u.avatarUrl} alt="" className="h-full w-full object-cover" /> : u.fullName?.[0]?.toUpperCase() || "U"}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-extrabold text-slate-900 truncate max-w-[150px]">{u.fullName || "User"}</p>
+                                  <p className="text-[11px] text-slate-500 font-mono truncate max-w-[150px]">{u.email}</p>
+                                </div>
+                              </td>
+                              <td className="px-3.5 py-3">
+                                <span className={clsx(
+                                  "px-2 py-0.5 rounded-full text-[10px] font-black uppercase border",
+                                  u.role === "admin" ? "bg-red-50 text-red-700 border-red-200" :
+                                  u.role === "provider" ? "bg-purple-50 text-purple-700 border-purple-200" :
+                                  "bg-blue-50 text-blue-700 border-blue-200"
+                                )}>
+                                  {u.role || "client"}
+                                </span>
+                              </td>
+                              <td className="px-3.5 py-3">
+                                {u.googleId || u.googleEmail ? (
+                                  <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                                    <span>✓</span> Google Linked
+                                  </span>
+                                ) : (
+                                  <span className="text-[10.5px] font-medium text-slate-400">Direct</span>
+                                )}
+                              </td>
+                              <td className="px-3.5 py-3 font-mono font-bold text-slate-800">
+                                {u.phone || <span className="text-slate-400 italic">Not set</span>}
+                              </td>
+                              <td className="px-3.5 py-3 font-medium text-slate-600">
+                                {u.location || "Abuja"}
+                              </td>
+                              <td className="px-3.5 py-3">
+                                <span className={clsx(
+                                  "px-2 py-0.5 rounded-full text-[10px] font-black uppercase border",
+                                  isSuspended ? "bg-red-100 text-red-800 border-red-300" : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                )}>
+                                  {isSuspended ? "SUSPENDED" : "ACTIVE"}
+                                </span>
+                              </td>
+                              <td className="px-3.5 py-3 text-[11px] text-slate-500">
+                                <div>{u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-NG", { dateStyle: "short" }) : "—"}</div>
+                                {u.lastLoginAt && (
+                                  <div className="text-[10px] text-slate-400 font-mono">
+                                    {new Date(u.lastLoginAt).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-3.5 py-3 text-right whitespace-nowrap space-x-1.5">
+                                {/* Toggle Active/Suspended */}
+                                <button
+                                  onClick={async () => {
+                                    const nextStatus = isSuspended ? "active" : "suspended";
+                                    await api("", {
+                                      method: "PUT",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ table: "users", id: u.id, data: { status: nextStatus } }),
+                                    });
+                                    showToast(`User account set to ${nextStatus.toUpperCase()}`);
+                                    loadData("users");
+                                  }}
+                                  className={clsx(
+                                    "px-2.5 py-1 rounded-lg text-[10.5px] font-bold border transition-colors",
+                                    isSuspended
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                      : "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
+                                  )}
+                                >
+                                  {isSuspended ? "Activate" : "Suspend"}
+                                </button>
+
+                                {/* Direct Message */}
+                                <button
+                                  onClick={() => openDirectMessage({ name: u.fullName, email: u.email, phone: u.phone })}
+                                  className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-[10.5px] font-bold hover:bg-blue-100"
+                                >
+                                  💬 Message
+                                </button>
+
+                                {/* WhatsApp */}
+                                {u.phone && (
+                                  <a
+                                    href={`https://wa.me/${u.phone.replace(/[^0-9]/g, "")}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-2.5 py-1 rounded-lg text-emerald-800 bg-emerald-50 hover:bg-emerald-100 text-[10.5px] font-black border border-emerald-200 inline-block"
+                                  >
+                                    WhatsApp
+                                  </a>
+                                )}
+
+                                {/* Delete User */}
+                                <button
+                                  onClick={() => handleDelete("users", u.id)}
+                                  className="px-2 py-1 rounded-lg text-red-500 hover:bg-red-50 text-[10.5px] font-bold inline-block"
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* ── DEDICATED CATEGORIES MANAGEMENT SECTION ── */}
+          {section === "categories" && (
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="text-[17px] font-black text-slate-900">Platform Categories Management</h3>
+                  <p className="text-[12px] text-slate-500 font-medium">Create, edit, sort, and toggle active status for top-level engineering trades</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={openCreateCategory}
+                    className="btn-pro-amber px-4 py-2 rounded-xl text-[12.5px] font-black shadow-sm flex items-center gap-1.5"
+                  >
+                    <span>+ Add New Category</span>
+                  </button>
+                  <button
+                    onClick={() => loadData("categories")}
+                    className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-700 text-[12px] font-bold hover:bg-slate-50 shadow-2xs"
+                  >
+                    🔄 Refresh
+                  </button>
+                </div>
               </div>
 
               {loading ? (
-                <div className="p-8 text-center text-slate-400">Loading users...</div>
+                <div className="p-8 text-center text-slate-400 animate-pulse">Loading categories from PostgreSQL...</div>
               ) : data.length === 0 ? (
-                <div className="p-12 text-center text-slate-500">No users found in database</div>
+                <div className="p-12 text-center text-slate-500">
+                  <p className="text-3xl mb-2">📁</p>
+                  <p className="font-extrabold text-[15px] text-slate-700">No categories found in database</p>
+                  <button
+                    onClick={openCreateCategory}
+                    className="mt-3 btn-pro-amber px-4 py-2 rounded-xl text-[12.5px] font-black"
+                  >
+                    + Create First Category
+                  </button>
+                </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-[12.5px]">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-500 tracking-wider text-left">
-                        <th className="px-4 py-3">User / Profile</th>
-                        <th className="px-4 py-3">Role</th>
-                        <th className="px-4 py-3">Phone / WhatsApp</th>
-                        <th className="px-4 py-3">Primary Location</th>
-                        <th className="px-4 py-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {data.map((u) => (
-                        <tr key={u.id} className="hover:bg-slate-50/70">
-                          <td className="px-4 py-3 flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
-                              {u.avatarUrl ? <img src={u.avatarUrl} alt="" className="h-full w-full object-cover" /> : "👤"}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {data.map((cat: any) => {
+                    const iconMap: Record<string, string> = {
+                      building: "🏗️",
+                      zap: "⚡",
+                      droplets: "🔧",
+                      home: "🏠",
+                      wrench: "🛠️",
+                      "hard-hat": "👷",
+                    };
+                    const displayIcon = iconMap[cat.icon] || cat.icon || "🏗️";
+
+                    return (
+                      <div
+                        key={cat.id}
+                        className={`rounded-2xl border p-4.5 flex flex-col justify-between transition-all shadow-xs ${
+                          cat.active !== false
+                            ? "bg-white border-slate-200 hover:border-amber-400"
+                            : "bg-slate-50/80 border-slate-200/60 opacity-60"
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2.5">
+                              <span className="text-2xl h-10 w-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center">
+                                {displayIcon}
+                              </span>
+                              <div>
+                                <h4 className="font-black text-[15px] text-slate-900 leading-snug">{cat.name}</h4>
+                                <p className="text-[11px] font-mono text-slate-400">/{cat.slug}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-extrabold text-slate-900">{u.fullName || "QuestMore User"}</p>
-                              <p className="text-[11px] text-slate-500 font-mono">{u.email}</p>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={clsx(
-                              "px-2.5 py-0.5 rounded-full text-[10.5px] font-black uppercase",
-                              u.role === "admin" ? "bg-red-100 text-red-800" :
-                              u.role === "provider" ? "bg-purple-100 text-purple-800" :
-                              "bg-blue-100 text-blue-800"
-                            )}>
-                              {u.role || "client"}
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${
+                                cat.active !== false
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : "bg-slate-200 text-slate-600 border-slate-300"
+                              }`}
+                            >
+                              {cat.active !== false ? "ACTIVE" : "INACTIVE"}
                             </span>
-                          </td>
-                          <td className="px-4 py-3 font-mono font-bold text-slate-800">
-                            {u.phone || <span className="text-slate-400 italic">Not set</span>}
-                          </td>
-                          <td className="px-4 py-3 font-medium text-slate-700">
-                            {u.location || "Abuja (FCT)"}
-                          </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap space-x-1.5">
-                            {u.phone && (
-                              <a
-                                href={`https://wa.me/${u.phone.replace(/[^0-9]/g, "")}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-2.5 py-1 rounded-lg text-emerald-800 bg-emerald-50 hover:bg-emerald-100 text-[11px] font-black border border-emerald-200 inline-block"
-                              >
-                                WhatsApp
-                              </a>
-                            )}
+                          </div>
+
+                          {cat.description && (
+                            <p className="text-[12px] text-slate-500 font-medium line-clamp-2 my-2 leading-relaxed">
+                              {cat.description}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 mt-3">
+                          <button
+                            onClick={() => handleToggleCategoryActive(cat)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
+                              cat.active !== false
+                                ? "bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200"
+                                : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200"
+                            }`}
+                          >
+                            {cat.active !== false ? "Deactivate" : "Activate"}
+                          </button>
+
+                          <div className="flex items-center gap-1.5">
                             <button
-                              onClick={() => handleDelete("users", u.id)}
-                              className="px-2.5 py-1 rounded-lg text-red-500 hover:bg-red-50 text-[11px] font-bold inline-block"
+                              onClick={() => openEditCategory(cat)}
+                              className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-bold hover:bg-blue-100"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete("categories", cat.id)}
+                              className="px-2.5 py-1 rounded-lg text-red-500 hover:bg-red-50 text-[11px] font-bold"
                             >
                               Delete
                             </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1858,7 +2226,7 @@ export default function AdminPage() {
           )}
 
           {/* 7. ALL OTHER SECTIONS */}
-          {!["dashboard", "services", "banners", "job_requests", "notifications", "users", "provider_management"].includes(section) && (
+          {!["dashboard", "services", "categories", "banners", "job_requests", "notifications", "users", "provider_management"].includes(section) && (
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-[16px] font-black text-slate-900 capitalize">{section.replace(/_/g, " ")}</h3>
@@ -2977,6 +3345,168 @@ export default function AdminPage() {
                   className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-extrabold shadow-md disabled:opacity-50"
                 >
                   {msgSending ? "Sending..." : msgTarget === "specific" ? "📨 Send Direct Message" : "📢 Broadcast Now"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: CREATE / EDIT CATEGORY ─── */}
+      {categoryModal.open && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden animate-scale-up">
+            <div className="px-6 py-4 bg-slate-950 flex items-center justify-between text-white">
+              <div>
+                <h3 className="text-[16px] font-black text-white">
+                  {categoryModal.mode === "edit" ? "✏️ Edit Category" : "+ Add New Category"}
+                </h3>
+                <p className="text-[11px] text-amber-400 font-bold mt-0.5">Top-level trade category for customer app</p>
+              </div>
+              <button
+                onClick={() => setCategoryModal({ open: false, mode: "create" })}
+                className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              {/* Name */}
+              <div>
+                <label className="block text-[12px] font-extrabold text-slate-800 mb-1">
+                  Category Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={categoryNameInput}
+                  onChange={(e) => {
+                    setCategoryNameInput(e.target.value);
+                    if (categoryModal.mode === "create") {
+                      setCategorySlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-"));
+                    }
+                  }}
+                  placeholder="e.g. Mechanical & HVAC Engineering"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[13px] font-bold outline-none focus:border-amber-500"
+                />
+              </div>
+
+              {/* Slug */}
+              <div>
+                <label className="block text-[12px] font-extrabold text-slate-800 mb-1">
+                  URL Slug
+                </label>
+                <input
+                  type="text"
+                  value={categorySlugInput}
+                  onChange={(e) => setCategorySlugInput(e.target.value)}
+                  placeholder="e.g. mechanical-hvac"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] font-mono text-slate-600 outline-none focus:border-amber-500 bg-slate-50"
+                />
+              </div>
+
+              {/* Icon Picker */}
+              <div>
+                <label className="block text-[12px] font-extrabold text-slate-800 mb-1.5">
+                  Category Icon
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {[
+                    { key: "building", emoji: "🏗️", label: "Build" },
+                    { key: "zap", emoji: "⚡", label: "Electric" },
+                    { key: "droplets", emoji: "🔧", label: "Plumbing" },
+                    { key: "home", emoji: "🏠", label: "Home" },
+                    { key: "wrench", emoji: "🛠️", label: "Machinery" },
+                    { key: "hard-hat", emoji: "👷", label: "Trades" },
+                  ].map((ic) => (
+                    <button
+                      key={ic.key}
+                      type="button"
+                      onClick={() => setCategoryIconInput(ic.key)}
+                      className={`p-2 rounded-xl border text-center transition-all ${
+                        categoryIconInput === ic.key
+                          ? "bg-amber-100 border-amber-400 shadow-xs"
+                          : "border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span className="text-xl block">{ic.emoji}</span>
+                      <span className="text-[10px] font-bold text-slate-600 block mt-0.5">{ic.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-[12px] font-extrabold text-slate-800 mb-1">
+                  Short Description
+                </label>
+                <textarea
+                  rows={2}
+                  value={categoryDescInput}
+                  onChange={(e) => setCategoryDescInput(e.target.value)}
+                  placeholder="Brief overview of services provided under this trade category"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] outline-none focus:border-amber-500 resize-none"
+                />
+              </div>
+
+              {/* Image URL */}
+              <div>
+                <label className="block text-[12px] font-extrabold text-slate-800 mb-1">
+                  Category Banner Image URL
+                </label>
+                <input
+                  type="text"
+                  value={categoryImageInput}
+                  onChange={(e) => setCategoryImageInput(e.target.value)}
+                  placeholder="https://... or /hero_engineering_bg.jpg"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] outline-none focus:border-amber-500 font-mono"
+                />
+              </div>
+
+              {/* Sort Order & Active */}
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-[12px] font-extrabold text-slate-800 mb-1">
+                    Display Order
+                  </label>
+                  <input
+                    type="number"
+                    value={categorySortOrderInput}
+                    onChange={(e) => setCategorySortOrderInput(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[13px] font-bold outline-none focus:border-amber-500"
+                  />
+                </div>
+                <div className="flex items-center gap-2 pt-6">
+                  <input
+                    type="checkbox"
+                    id="cat_active_checkbox"
+                    checked={categoryActiveInput}
+                    onChange={(e) => setCategoryActiveInput(e.target.checked)}
+                    className="h-4 w-4 rounded text-amber-500"
+                  />
+                  <label htmlFor="cat_active_checkbox" className="text-[12.5px] font-bold text-slate-800 cursor-pointer">
+                    Active on Customer App
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setCategoryModal({ open: false, mode: "create" })}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-[13px] font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveCategory}
+                  disabled={saving}
+                  className="flex-1 py-2.5 rounded-xl btn-pro-amber text-[13px] font-black shadow-md disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : categoryModal.mode === "edit" ? "Save Changes" : "Create Category"}
                 </button>
               </div>
             </div>

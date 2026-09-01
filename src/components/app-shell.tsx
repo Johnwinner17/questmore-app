@@ -84,6 +84,19 @@ export function AppShell({ initialData }: {
   }, []);
   const clearBasket = useCallback(() => setBasket([]), []);
 
+  const [dynamicCategories, setDynamicCategories] = useState<Category[]>(initialData.categories);
+
+  const reloadCategories = useCallback(() => {
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d) && d.length > 0) {
+          setDynamicCategories(d);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     // Check saved session in localStorage
     try {
@@ -107,12 +120,19 @@ export function AppShell({ initialData }: {
     } catch (e) {
       setShowWelcome(true);
     } finally {
+      reloadCategories();
       const timer = setTimeout(() => {
         setShowSplash(false);
       }, 1800);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [reloadCategories]);
+
+  // Periodic category sync (every 30s)
+  useEffect(() => {
+    const interval = setInterval(reloadCategories, 30_000);
+    return () => clearInterval(interval);
+  }, [reloadCategories]);
 
   const handleRoleSelection = (role: "client" | "provider") => {
     if (role === "client") {
@@ -231,10 +251,10 @@ export function AppShell({ initialData }: {
           <div className="h-full w-full overflow-hidden relative">
             <div className={clsx("absolute inset-0 transition-transform duration-300", isOnTab ? "translate-x-0" : "-translate-x-full")} style={{ willChange: "transform" }}>
               <div className={clsx("h-full", activeTab !== "home" && "hidden")}>
-                <HomeTab data={initialData} onNavigate={navigate} onSwitchToExplore={switchToExplore} />
+                <HomeTab data={{ ...initialData, categories: dynamicCategories }} onNavigate={navigate} onSwitchToExplore={switchToExplore} />
               </div>
               <div className={clsx("h-full", activeTab !== "explore" && "hidden")}>
-                <ExploreTab categories={initialData.categories} onNavigate={navigate} basket={basket} onToggleBasket={toggleBasket} onClearBasket={clearBasket} />
+                <ExploreTab categories={dynamicCategories} onNavigate={navigate} basket={basket} onToggleBasket={toggleBasket} onClearBasket={clearBasket} />
               </div>
               <div className={clsx("h-full", activeTab !== "activity" && "hidden")}>
                 <ActivityTab currentUser={currentUser} />
@@ -261,7 +281,7 @@ export function AppShell({ initialData }: {
                   <RequestPage
                     service={currentPage.service}
                     category={currentPage.category}
-                    categories={initialData.categories}
+                    categories={dynamicCategories}
                     preselectedServices={currentPage.preselectedServices || (basket.length > 0 ? basket : undefined)}
                     onBack={goBack}
                     onNavigateToActivity={switchToActivity}

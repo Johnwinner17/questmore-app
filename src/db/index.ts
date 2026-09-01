@@ -248,6 +248,11 @@ export async function ensureDbInitialized(): Promise<boolean> {
       // 2. Self-Healing Schema Alterations (guarantee all columns exist without crashing)
       await client.query(`
         ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS google_email VARCHAR(255);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
         ALTER TABLE users ADD COLUMN IF NOT EXISTS experience_years INTEGER;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS qualifications TEXT;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS id_document_url TEXT;

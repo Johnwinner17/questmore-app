@@ -3,6 +3,7 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { serverStore } from "@/lib/server-store";
+import { hashPassword, verifyPassword, sanitizeUser, generateAuthTokens } from "@/lib/auth-crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -12,61 +13,78 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action } = body; // 'register' | 'login'
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // 1. PROVIDER LOGIN
+    // ─────────────────────────────────────────────────────────────────────────
     if (action === "login") {
       const { email, password } = body;
-      if (!email) return NextResponse.json({ error: "Email is required" }, { status: 400 });
+      if (!email || !password) {
+        return NextResponse.json({ error: "Please provide both email and password." }, { status: 400 });
+      }
+
+      const cleanEmail = email.trim().toLowerCase();
 
       let providerUser: any = null;
       try {
-        const found = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
+        const found = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, cleanEmail))
+          .limit(1);
         if (found.length > 0) providerUser = found[0];
       } catch (e) {
         console.error("DB provider login lookup error:", e);
       }
 
       if (!providerUser) {
-        providerUser = serverStore.users.find(u => u.email?.toLowerCase() === email.trim().toLowerCase() && u.role === "provider");
+        providerUser = serverStore.users.find(
+          (u) => u.email?.toLowerCase() === cleanEmail && u.role === "provider"
+        );
       }
 
-      if (providerUser) {
-        if (providerUser.passwordHash && password) {
-          const expectedHash = `hash_${password}`;
-          if (providerUser.passwordHash !== expectedHash && providerUser.passwordHash !== password) {
-            return NextResponse.json({ error: "Incorrect password. Please try again." }, { status: 401 });
-          }
-        }
-
-        return NextResponse.json({
-          success: true,
-          user: providerUser,
-          isVerified: providerUser.verificationStatus === "verified",
-        });
+      if (!providerUser) {
+        return NextResponse.json(
+          { error: "No service provider account found with this email. Please register first." },
+          { status: 404 }
+        );
       }
 
-      // Demo provider fallback for quick preview
-      if (email.toLowerCase().includes("demo") || email.toLowerCase().includes("john")) {
-        const demoUser = {
-          id: 2,
-          role: "provider",
-          fullName: "Engr. John Obi",
-          email: email.trim().toLowerCase(),
-          phone: "+2348021234567",
-          professionId: 1,
-          professionName: "Plumber",
-          experienceYears: 8,
-          qualifications: "COREN Tech, City & Guilds Level 3 Plumbing",
-          bio: "Master plumber with 8+ years experience executing commercial plumbing and pipe networks.",
-          verificationStatus: "verified",
-          verified: true,
-          location: "Gwarinpa, Abuja",
-        };
-        return NextResponse.json({ success: true, user: demoUser, isVerified: true });
+      if (providerUser.status === "suspended" || providerUser.status === "deactivated") {
+        return NextResponse.json(
+          { error: "Your service provider account has been suspended. Please contact admin." },
+          { status: 403 }
+        );
       }
 
-      return NextResponse.json({ error: "Account not found. Please register first." }, { status: 404 });
+      // Verify password with secure crypto
+      const isPasswordValid = verifyPassword(password, providerUser.passwordHash);
+      if (!isPasswordValid) {
+        return NextResponse.json(
+          { error: "Incorrect password. Please try again." },
+          { status: 401 }
+        );
+      }
+
+      // Update lastLoginAt
+      const now = new Date();
+      try {
+        await db.update(users).set({ lastLoginAt: now }).where(eq(users.id, providerUser.id));
+        providerUser.lastLoginAt = now;
+      } catch (e) {}
+
+      const tokens = generateAuthTokens(providerUser.id, providerUser.email);
+
+      return NextResponse.json({
+        success: true,
+        user: sanitizeUser(providerUser),
+        isVerified: providerUser.verificationStatus === "verified",
+        tokens,
+      });
     }
 
-    // Default: 'register'
+    // ─────────────────────────────────────────────────────────────────────────
+    // 2. PROVIDER REGISTRATION
+    // ─────────────────────────────────────────────────────────────────────────
     const {
       fullName,
       phone,
@@ -90,11 +108,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!password || password.length < 6) {
+      return NextResponse.json(
+        { error: "Password must be at least 6 characters long." },
+        { status: 400 }
+      );
+    }
+
     const cleanEmail = email.trim().toLowerCase();
 
     // Check if email already exists
     try {
-      const existing = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
+      const existing = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, cleanEmail))
+        .limit(1);
       if (existing.length > 0) {
         return NextResponse.json(
           { error: "An account with this email already exists. Please log in." },
@@ -103,14 +132,19 @@ export async function POST(req: NextRequest) {
       }
     } catch (e) {}
 
+    const passwordHash = hashPassword(password);
+    const now = new Date();
+
     const newProviderData = {
       role: "provider",
       fullName: fullName.trim(),
       email: cleanEmail,
       phone: phone.trim(),
-      passwordHash: password ? `hash_${password}` : null,
-      avatarUrl: avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
-      location: location || null,
+      passwordHash,
+      avatarUrl:
+        avatarUrl ||
+        `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
+      location: location || "Abuja",
       address: address || null,
       professionId: professionId ? Number(professionId) : null,
       professionName,
@@ -120,37 +154,47 @@ export async function POST(req: NextRequest) {
       bio: bio || null,
       verificationStatus: "awaiting_verification",
       verified: false,
+      status: "active",
+      lastLoginAt: now,
     };
+
+    let createdUser: any = null;
 
     try {
-      const [inserted] = await db.insert(users).values(newProviderData).returning();
-      if (inserted) {
-        serverStore.users.push(inserted);
-        return NextResponse.json({
-          success: true,
-          user: inserted,
-          message: "Application submitted successfully! Your account is currently awaiting verification by QuestMore Engineering.",
-        });
-      }
-    } catch (insertErr) {
-      console.error("Error inserting provider into PostgreSQL:", insertErr);
+      const [inserted] = await db
+        .insert(users)
+        .values(newProviderData as any)
+        .returning();
+      if (inserted) createdUser = inserted;
+    } catch (e) {
+      console.error("DB insert provider error:", e);
     }
 
-    // Fallback store
-    const fallbackProvider = {
-      id: Date.now(),
-      ...newProviderData,
-      createdAt: new Date().toISOString(),
-    };
-    serverStore.users.push(fallbackProvider as any);
+    if (!createdUser) {
+      createdUser = {
+        id: Date.now(),
+        ...newProviderData,
+        createdAt: now.toISOString(),
+      };
+      serverStore.users.push(createdUser as any);
+    } else {
+      serverStore.users.push(createdUser);
+    }
+
+    const tokens = generateAuthTokens(createdUser.id, createdUser.email);
 
     return NextResponse.json({
       success: true,
-      user: fallbackProvider,
-      message: "Application submitted successfully! Your account is currently awaiting verification by QuestMore Engineering.",
+      user: sanitizeUser(createdUser),
+      isVerified: false,
+      message: "Application submitted! QuestMore verification desk will review your trade credentials.",
+      tokens,
     });
   } catch (error) {
-    console.error("Provider auth error:", error);
-    return NextResponse.json({ error: "Failed to process application" }, { status: 500 });
+    console.error("Provider Auth error:", error);
+    return NextResponse.json(
+      { error: "Provider authentication failed. Please try again." },
+      { status: 500 }
+    );
   }
 }
