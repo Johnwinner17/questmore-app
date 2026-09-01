@@ -1,12 +1,14 @@
-import { db } from "@/db";
+import { db, ensureDbInitialized } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { serverStore } from "@/lib/server-store";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDbInitialized().catch(() => {});
     const body = await req.json();
     const { action } = body; // 'register' | 'login'
 
@@ -14,15 +16,26 @@ export async function POST(req: NextRequest) {
       const { email, password } = body;
       if (!email) return NextResponse.json({ error: "Email is required" }, { status: 400 });
 
-      let providerUser = null;
+      let providerUser: any = null;
       try {
-        const found = await db.select().from(users).where(eq(users.email, email)).limit(1);
+        const found = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
         if (found.length > 0) providerUser = found[0];
       } catch (e) {
-        // Fallback
+        console.error("DB provider login lookup error:", e);
+      }
+
+      if (!providerUser) {
+        providerUser = serverStore.users.find(u => u.email?.toLowerCase() === email.trim().toLowerCase() && u.role === "provider");
       }
 
       if (providerUser) {
+        if (providerUser.passwordHash && password) {
+          const expectedHash = `hash_${password}`;
+          if (providerUser.passwordHash !== expectedHash && providerUser.passwordHash !== password) {
+            return NextResponse.json({ error: "Incorrect password. Please try again." }, { status: 401 });
+          }
+        }
+
         return NextResponse.json({
           success: true,
           user: providerUser,
@@ -30,13 +43,13 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Demo provider fallback for demo@questmore.com
-      if (email.toLowerCase().includes("provider") || email.toLowerCase().includes("john")) {
+      // Demo provider fallback for quick preview
+      if (email.toLowerCase().includes("demo") || email.toLowerCase().includes("john")) {
         const demoUser = {
           id: 2,
           role: "provider",
           fullName: "Engr. John Obi",
-          email,
+          email: email.trim().toLowerCase(),
           phone: "+2348021234567",
           professionId: 1,
           professionName: "Plumber",
@@ -77,24 +90,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
     // Check if email already exists
     try {
-      const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      const existing = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
       if (existing.length > 0) {
         return NextResponse.json(
           { error: "An account with this email already exists. Please log in." },
           { status: 400 }
         );
       }
-    } catch (e) {
-      // Continue
-    }
+    } catch (e) {}
 
     const newProviderData = {
       role: "provider",
-      fullName,
-      email,
-      phone,
+      fullName: fullName.trim(),
+      email: cleanEmail,
+      phone: phone.trim(),
       passwordHash: password ? `hash_${password}` : null,
       avatarUrl: avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
       location: location || null,
@@ -105,30 +118,37 @@ export async function POST(req: NextRequest) {
       qualifications: qualifications || null,
       idDocumentUrl: idDocumentUrl || null,
       bio: bio || null,
-      verificationStatus: "awaiting_verification", // STRICT: newly registered starts in awaiting verification!
+      verificationStatus: "awaiting_verification",
       verified: false,
     };
 
     try {
       const [inserted] = await db.insert(users).values(newProviderData).returning();
-      return NextResponse.json({
-        success: true,
-        user: inserted,
-        message: "Application submitted successfully! Your account is currently awaiting verification by QuestMore Engineering.",
-      });
+      if (inserted) {
+        serverStore.users.push(inserted);
+        return NextResponse.json({
+          success: true,
+          user: inserted,
+          message: "Application submitted successfully! Your account is currently awaiting verification by QuestMore Engineering.",
+        });
+      }
     } catch (insertErr) {
-      // Fallback
-      const fallbackProvider = {
-        id: Date.now(),
-        ...newProviderData,
-        createdAt: new Date().toISOString(),
-      };
-      return NextResponse.json({
-        success: true,
-        user: fallbackProvider,
-        message: "Application submitted successfully! Your account is currently awaiting verification by QuestMore Engineering.",
-      });
+      console.error("Error inserting provider into PostgreSQL:", insertErr);
     }
+
+    // Fallback store
+    const fallbackProvider = {
+      id: Date.now(),
+      ...newProviderData,
+      createdAt: new Date().toISOString(),
+    };
+    serverStore.users.push(fallbackProvider as any);
+
+    return NextResponse.json({
+      success: true,
+      user: fallbackProvider,
+      message: "Application submitted successfully! Your account is currently awaiting verification by QuestMore Engineering.",
+    });
   } catch (error) {
     console.error("Provider auth error:", error);
     return NextResponse.json({ error: "Failed to process application" }, { status: 500 });

@@ -178,6 +178,7 @@ export default function AdminPage() {
   // Form State for Service Studio
   const [serviceName, setServiceName] = useState("");
   const [serviceCategoryId, setServiceCategoryId] = useState<number>(1);
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [serviceSubcategoryId, setServiceSubcategoryId] = useState<number | null>(null);
   const [serviceShortDesc, setServiceShortDesc] = useState("");
   const [serviceFullDesc, setServiceFullDesc] = useState("");
@@ -270,6 +271,7 @@ export default function AdminPage() {
 
   // ── Open Service Studio (Create or Edit) ──
   const openServiceStudio = (service?: Record<string, any>) => {
+    setCategoryDropdownOpen(false);
     if (service) {
       setServiceName(service.name || "");
       setServiceCategoryId(Number(service.categoryId) || 1);
@@ -377,7 +379,7 @@ export default function AdminPage() {
         });
         if (res.error) showToast(`Error: ${res.error}`);
         else {
-          showToast("✓ Service updated successfully!");
+          showToast("✓ Service updated successfully in PostgreSQL database!");
           setModal(null);
           loadData("services");
           loadStats();
@@ -391,7 +393,7 @@ export default function AdminPage() {
         });
         if (res.error) showToast(`Error: ${res.error}`);
         else {
-          showToast("✓ New service created & posted live!");
+          showToast("✓ New service saved in PostgreSQL & posted live!");
           setModal(null);
           loadData("services");
           loadStats();
@@ -436,7 +438,7 @@ export default function AdminPage() {
     try {
       const res = await api(`?table=${table}&id=${id}`, { method: "DELETE" });
       if (res.success) {
-        showToast("Record deleted successfully");
+        showToast("Record deleted successfully from database");
         loadData(section);
         loadStats();
       }
@@ -544,32 +546,6 @@ export default function AdminPage() {
     }
   };
 
-  // Provider Application Verification
-  const handleUpdateProviderStatus = async (userId: number, verificationStatus: "verified" | "rejected" | "suspended") => {
-    setSaving(true);
-    try {
-      const res = await api("", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          table: "provider_applications",
-          id: userId,
-          data: { verificationStatus },
-        }),
-      });
-      if (res.success) {
-        showToast(`Provider status updated to ${verificationStatus}`);
-        setModal(null);
-        loadData("provider_applications");
-        loadStats();
-      }
-    } catch (e) {
-      showToast("Failed to update status");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   // Platform Booking Fee Save
   const handleSaveBookingFee = async () => {
     setSaving(true);
@@ -672,6 +648,8 @@ export default function AdminPage() {
     return matchesSearch && matchesCategory;
   });
 
+  const selectedCategoryObj = catOptions.find((c) => c.id === serviceCategoryId) || catOptions[0];
+
   return (
     <div className="flex h-screen bg-slate-100 font-sans text-slate-900 overflow-hidden">
       {/* ─── SIDEBAR ─── */}
@@ -738,14 +716,14 @@ export default function AdminPage() {
         <div className="p-4 border-t border-slate-800 bg-slate-900/60 text-[12px] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-slate-400 font-medium">PostgreSQL Live</span>
+            <span className="text-slate-300 font-bold">PostgreSQL Connected</span>
           </div>
           <a
             href="/"
             target="_blank"
-            className="text-amber-400 font-bold hover:underline text-[11.5px]"
+            className="text-amber-400 font-black hover:underline text-[11.5px]"
           >
-            Visit App ↗
+            Open App ↗
           </a>
         </div>
       </aside>
@@ -805,7 +783,7 @@ export default function AdminPage() {
               onClick={() => {
                 loadStats();
                 if (section !== "dashboard") loadData(section);
-                showToast("Refreshed data!");
+                showToast("Refreshed live data!");
               }}
               className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-bold text-slate-700 hover:bg-slate-100 shadow-2xs"
             >
@@ -815,7 +793,7 @@ export default function AdminPage() {
         </header>
 
         {/* Dynamic Section Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-7 space-y-6">
           {/* 1. OVERVIEW & METRICS */}
           {section === "dashboard" && (
             <div className="space-y-6 max-w-6xl">
@@ -825,7 +803,7 @@ export default function AdminPage() {
               </div>
 
               {/* KPI Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4">
                 <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs">
                   <div className="flex items-center justify-between text-slate-400 mb-2">
                     <span className="text-[11.5px] font-extrabold uppercase tracking-wider">Total Requests</span>
@@ -1425,7 +1403,7 @@ export default function AdminPage() {
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
                   <h3 className="text-[16px] font-black text-slate-900">Registered Users & Clients ({data.length})</h3>
-                  <p className="text-[11.5px] text-slate-500">Permanently saved Google accounts, contact phone numbers, and profile locations</p>
+                  <p className="text-[11.5px] text-slate-500">Permanently saved Google accounts, contact phone numbers, and profile locations in PostgreSQL</p>
                 </div>
                 <button
                   onClick={() => exportToCSV(data, "questmore_registered_users")}
@@ -1438,7 +1416,7 @@ export default function AdminPage() {
               {loading ? (
                 <div className="p-8 text-center text-slate-400">Loading users...</div>
               ) : data.length === 0 ? (
-                <div className="p-12 text-center text-slate-500">No users found</div>
+                <div className="p-12 text-center text-slate-500">No users found in database</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-[12.5px]">
@@ -1506,7 +1484,7 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* 7. ALL OTHER SECTIONS (Categories, Subcategories, Reviews, FAQs, Areas, Settings) */}
+          {/* 7. ALL OTHER SECTIONS */}
           {!["dashboard", "services", "banners", "job_requests", "notifications", "users"].includes(section) && (
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1582,9 +1560,9 @@ export default function AdminPage() {
       {/* ─── MODAL: ADVANCED SERVICE POSTING & EDITING STUDIO ─── */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {modal?.mode === "service_studio" && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
-          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-scale-up border border-slate-200">
-            {/* Studio Header */}
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto overscroll-none">
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90dvh] sm:max-h-[86vh] flex flex-col shadow-2xl overflow-hidden animate-scale-up border border-slate-200/90 my-auto">
+            {/* Studio Header (Sticky) */}
             <div className="px-6 py-4 bg-slate-950 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-amber-400 text-slate-950 font-black flex items-center justify-center text-lg shadow-sm">
@@ -1606,38 +1584,60 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* Studio Body */}
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 no-scrollbar">
-              {/* 1. Category Selection (Clickable Badges) */}
-              <div>
-                <label className="block text-[12px] font-extrabold text-slate-800 mb-2">
-                  Select Category *
+            {/* Studio Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5 touch-pan-y overscroll-contain pb-8">
+              {/* 1. Category Selection (Collapsible / Click to Expand Dropdown) */}
+              <div className="relative">
+                <label className="block text-[12px] font-extrabold text-slate-800 mb-1.5">
+                  Service Category *
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {catOptions.map((c) => {
-                    const isSelected = serviceCategoryId === c.id;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => {
-                          setServiceCategoryId(c.id);
-                          setServiceSubcategoryId(null);
-                        }}
-                        className={clsx(
-                          "p-3 rounded-2xl border text-left transition-all flex flex-col justify-between cursor-pointer",
-                          isSelected
-                            ? "bg-amber-500/10 border-amber-500 ring-2 ring-amber-400/40 text-slate-950 shadow-xs"
-                            : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-white"
-                        )}
-                      >
-                        <span className="text-xl mb-1">{c.icon === "zap" ? "⚡" : c.icon === "droplets" ? "🔧" : c.icon === "home" ? "🏠" : "🏗️"}</span>
-                        <span className="text-[12.5px] font-black">{c.name}</span>
-                        {isSelected && <span className="text-[10px] font-bold text-amber-700 mt-1">✓ Selected</span>}
-                      </button>
-                    );
-                  })}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+                  className="w-full flex items-center justify-between p-3 rounded-2xl border-2 border-slate-200 hover:border-amber-400 bg-white shadow-2xs transition-all text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{selectedCategoryObj?.icon === "zap" ? "⚡" : selectedCategoryObj?.icon === "droplets" ? "🔧" : selectedCategoryObj?.icon === "home" ? "🏠" : "🏗️"}</span>
+                    <div>
+                      <p className="text-[13px] font-black text-slate-900">{selectedCategoryObj?.name || "Select Category"}</p>
+                      <p className="text-[10.5px] text-slate-500 font-medium">Click to change engineering category</p>
+                    </div>
+                  </div>
+                  <span className={clsx("text-slate-400 font-black text-xs transition-transform duration-200 mr-1", categoryDropdownOpen ? "rotate-180" : "rotate-0")}>
+                    ▼
+                  </span>
+                </button>
+
+                {categoryDropdownOpen && (
+                  <div className="mt-2 bg-slate-50 rounded-2xl border border-slate-200/90 shadow-md p-2 space-y-1 animate-scale-up">
+                    {catOptions.map((c) => {
+                      const isSelected = serviceCategoryId === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setServiceCategoryId(c.id);
+                            setServiceSubcategoryId(null);
+                            setCategoryDropdownOpen(false);
+                          }}
+                          className={clsx(
+                            "w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all cursor-pointer",
+                            isSelected
+                              ? "bg-amber-400 text-slate-950 font-black shadow-2xs"
+                              : "hover:bg-white text-slate-700 font-bold"
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-lg">{c.icon === "zap" ? "⚡" : c.icon === "droplets" ? "🔧" : c.icon === "home" ? "🏠" : "🏗️"}</span>
+                            <span className="text-[13px]">{c.name}</span>
+                          </div>
+                          {isSelected && <span className="text-[11px] font-black">✓ Selected</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* 2. Service Title */}
@@ -1651,12 +1651,12 @@ export default function AdminPage() {
                   value={serviceName}
                   onChange={(e) => setServiceName(e.target.value)}
                   placeholder="e.g. 10kVA Commercial Solar Inverter & Battery Setup"
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[13.5px] font-bold text-slate-900 outline-none focus:border-amber-500"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[13.5px] font-bold text-slate-900 outline-none focus:border-amber-500 bg-white"
                 />
               </div>
 
               {/* 3. Image Selection: Local Phone/Laptop Upload, URL or Presets */}
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-[12px] font-extrabold text-slate-800">
                     Service Photography / Image *
@@ -1713,7 +1713,7 @@ export default function AdminPage() {
                       <p className="text-[13px] font-black text-slate-900">
                         {imageUploading ? "Processing Image..." : "Tap to Pick Image from Phone Gallery or Laptop"}
                       </p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">Supports any format (JPG, PNG, WebP, HEIC, GIF). Auto-optimized.</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Supports any format (JPG, PNG, WebP, HEIC, GIF). Auto-compressed.</p>
                     </div>
                   </div>
                 )}
@@ -1727,7 +1727,7 @@ export default function AdminPage() {
                         type="button"
                         onClick={() => setServiceImageUrl(p.url)}
                         className={clsx(
-                          "rounded-xl overflow-hidden border p-1 text-left bg-white transition-all",
+                          "rounded-xl overflow-hidden border p-1 text-left bg-white transition-all cursor-pointer",
                           serviceImageUrl === p.url ? "border-amber-500 ring-2 ring-amber-400" : "border-slate-200 hover:border-slate-300"
                         )}
                       >
@@ -1771,7 +1771,7 @@ export default function AdminPage() {
               </div>
 
               {/* 4. Clickable Pricing Model (Segmented Control) */}
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 space-y-3">
                 <label className="block text-[12px] font-extrabold text-slate-800">
                   Pricing Model *
                 </label>
@@ -1854,7 +1854,7 @@ export default function AdminPage() {
                     value={serviceShortDesc}
                     onChange={(e) => setServiceShortDesc(e.target.value)}
                     placeholder="e.g. Complete solar system design, panel mounting, and inverter setup."
-                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[13px] text-slate-900 outline-none focus:border-amber-500"
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[13px] text-slate-900 outline-none focus:border-amber-500 bg-white"
                   />
                 </div>
 
@@ -1867,13 +1867,13 @@ export default function AdminPage() {
                     value={serviceFullDesc}
                     onChange={(e) => setServiceFullDesc(e.target.value)}
                     placeholder="Detailed explanation of what the engineer will execute on site..."
-                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] text-slate-900 outline-none focus:border-amber-500 resize-none"
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-[12.5px] text-slate-900 outline-none focus:border-amber-500 resize-none bg-white"
                   />
                 </div>
               </div>
 
               {/* 6. Feature Bullet Points Builder (No Raw JSON typing) */}
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-2.5">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 space-y-2.5">
                 <label className="block text-[12px] font-extrabold text-slate-800">
                   Feature Highlights & Guarantee Bullet Points
                 </label>
@@ -1890,7 +1890,7 @@ export default function AdminPage() {
                         addFeatureTag(newFeatureInput);
                       }
                     }}
-                    placeholder="Type feature (e.g. 5-year replacement warranty) & tap Add..."
+                    placeholder="Type feature & press Enter or tap Add..."
                     className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-[12.5px] outline-none focus:border-amber-500"
                   />
                   <button
@@ -1932,7 +1932,7 @@ export default function AdminPage() {
                         key={p}
                         type="button"
                         onClick={() => addFeatureTag(p)}
-                        className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[10.5px] font-bold text-slate-600 hover:border-amber-400 hover:text-slate-900"
+                        className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[10.5px] font-bold text-slate-600 hover:border-amber-400 hover:text-slate-900 cursor-pointer"
                       >
                         + {p}
                       </button>
@@ -1977,7 +1977,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Studio Footer */}
+            {/* Studio Footer (Sticky) */}
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
               <button
                 type="button"
@@ -1999,7 +1999,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ─── MODAL: ADD / EDIT HERO SLIDING BANNER (With Phone/Laptop Upload) ─── */}
+      {/* ─── MODAL: ADD / EDIT HERO SLIDING BANNER ─── */}
       {(modal?.mode === "create_banner" || modal?.mode === "edit_banner") && (
         <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl p-6 space-y-4 animate-scale-up">

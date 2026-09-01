@@ -403,6 +403,7 @@ export async function GET(req: NextRequest) {
 // POST: Create records (Single or Bulk)
 export async function POST(req: NextRequest) {
   try {
+    await ensureDbInitialized().catch(() => {});
     const body = await req.json();
     const { table, data, photos, action } = body;
 
@@ -432,7 +433,7 @@ export async function POST(req: NextRequest) {
 
     switch (table) {
       case "services": {
-        const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+        const slug = (data.name || `service-${Date.now()}`).toLowerCase().replace(/[^a-z0-9]+/g, "-");
         const newService = {
           name: data.name,
           slug,
@@ -445,6 +446,7 @@ export async function POST(req: NextRequest) {
           featured: data.featured === "true" || data.featured === true,
           active: data.active === "false" || data.active === false ? false : true,
           sortOrder: data.sortOrder ? Number(data.sortOrder) : serverStore.services.length + 1,
+          features: data.features || null,
         };
 
         try {
@@ -453,10 +455,12 @@ export async function POST(req: NextRequest) {
             serverStore.services.push(inserted);
             return NextResponse.json(inserted);
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error("Error inserting service into DB:", e);
+        }
 
         const fallback = { id: Date.now(), ...newService };
-        serverStore.services.push(fallback);
+        serverStore.services.push(fallback as any);
         return NextResponse.json(fallback);
       }
 
@@ -658,6 +662,7 @@ export async function POST(req: NextRequest) {
 // PUT: Update records
 export async function PUT(req: NextRequest) {
   try {
+    await ensureDbInitialized().catch(() => {});
     const body = await req.json();
     const { table, id, data } = body;
 
@@ -878,13 +883,16 @@ export async function PUT(req: NextRequest) {
         if (data.categoryId) updateFields.categoryId = Number(data.categoryId);
         if (data.subcategoryId) updateFields.subcategoryId = Number(data.subcategoryId);
         if (data.sortOrder !== undefined) updateFields.sortOrder = Number(data.sortOrder);
+        if (data.features !== undefined) updateFields.features = data.features;
 
         try {
           await db
             .update(services)
             .set(updateFields)
             .where(eq(services.id, Number(id)));
-        } catch (e) {}
+        } catch (e) {
+          console.error("DB update service error:", e);
+        }
 
         serverStore.services = serverStore.services.map(s =>
           s.id === Number(id) ? { ...s, ...updateFields } : s

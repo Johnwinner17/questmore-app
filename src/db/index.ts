@@ -4,28 +4,28 @@ import { serverStore } from "@/lib/server-store";
 
 const databaseUrl =
   process.env.DATABASE_URL ||
-  "postgresql://postgres:postgres@127.0.0.1:5432/questmore";
+  "postgresql://questmore_user:WVhlJXfTDxPT8ThXzQlqt3UyVuI6KVgR@dpg-da0dfqtbedkc73ahbjcg-a.oregon-postgres.render.com:5432/questmore_db";
 
 const globalForDb = globalThis as typeof globalThis & {
   __arenaNextJsPostgresqlPool?: Pool;
   __dbInitialized?: boolean;
 };
 
-// SSL configuration:
-// - Render internal host (dpg-xxx without .render.com) DOES NOT use SSL (internal private network TCP)
-// - External Render host (xxx.oregon-postgres.render.com) or external clouds DO use SSL
-const isExternalCloudDb =
+// SSL configuration for Cloud PostgreSQL
+const isCloudDb =
   databaseUrl.includes("render.com") ||
   databaseUrl.includes("neon.tech") ||
   databaseUrl.includes("supabase.co") ||
-  databaseUrl.includes("sslmode=require");
+  databaseUrl.includes("dpg-") ||
+  databaseUrl.includes("sslmode=require") ||
+  process.env.NODE_ENV === "production";
 
 export const pool =
   globalForDb.__arenaNextJsPostgresqlPool ??
   new Pool({
     connectionString: databaseUrl,
-    ssl: isExternalCloudDb ? { rejectUnauthorized: false } : undefined,
-    max: 10,
+    ssl: isCloudDb ? { rejectUnauthorized: false } : undefined,
+    max: 15,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
   });
@@ -37,8 +37,8 @@ if (process.env.NODE_ENV !== "production") {
 export const db = drizzle(pool);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// AUTO-INITIALIZATION & PERSISTENCE ENGINE
-// Ensures all PostgreSQL tables exist and auto-seeds/syncs platform services.
+// AUTO-INITIALIZATION, SELF-HEALING MIGRATIONS & DATA PERSISTENCE ENGINE
+// Ensures all PostgreSQL tables and columns exist and auto-seeds/syncs services.
 // ─────────────────────────────────────────────────────────────────────────────
 export async function ensureDbInitialized(): Promise<boolean> {
   if (globalForDb.__dbInitialized) return true;
@@ -46,7 +46,7 @@ export async function ensureDbInitialized(): Promise<boolean> {
   try {
     const client = await pool.connect();
     try {
-      // 1. Create tables
+      // 1. Create tables if not present
       await client.query(`
         CREATE TABLE IF NOT EXISTS users (
           id SERIAL PRIMARY KEY,
@@ -54,12 +54,16 @@ export async function ensureDbInitialized(): Promise<boolean> {
           full_name VARCHAR(255) NOT NULL,
           email VARCHAR(255) NOT NULL UNIQUE,
           phone VARCHAR(50),
+          password_hash VARCHAR(255),
           avatar_url TEXT,
           location VARCHAR(255),
           address TEXT,
           profession_name VARCHAR(255),
           profession_id INTEGER,
+          experience_years INTEGER,
           years_of_experience INTEGER,
+          qualifications TEXT,
+          id_document_url TEXT,
           government_id_type VARCHAR(100),
           government_id_number VARCHAR(100),
           government_id_url TEXT,
@@ -78,6 +82,7 @@ export async function ensureDbInitialized(): Promise<boolean> {
         CREATE TABLE IF NOT EXISTS notifications (
           id SERIAL PRIMARY KEY,
           user_id INTEGER,
+          user_email VARCHAR(255),
           title VARCHAR(255) NOT NULL,
           message TEXT NOT NULL,
           type VARCHAR(50) DEFAULT 'system',
@@ -112,7 +117,7 @@ export async function ensureDbInitialized(): Promise<boolean> {
 
         CREATE TABLE IF NOT EXISTS services (
           id SERIAL PRIMARY KEY,
-          subcategory_id INTEGER NOT NULL,
+          subcategory_id INTEGER,
           category_id INTEGER NOT NULL,
           name VARCHAR(255) NOT NULL,
           slug VARCHAR(255) NOT NULL,
@@ -120,6 +125,7 @@ export async function ensureDbInitialized(): Promise<boolean> {
           full_description TEXT,
           image_url TEXT,
           gallery TEXT,
+          features TEXT,
           price INTEGER,
           featured BOOLEAN DEFAULT FALSE,
           sort_order INTEGER DEFAULT 0,
@@ -159,6 +165,10 @@ export async function ensureDbInitialized(): Promise<boolean> {
           job_status VARCHAR(50) DEFAULT 'awaiting_admin_review',
           status VARCHAR(50) DEFAULT 'pending',
           status_note TEXT,
+          milestone_photos TEXT,
+          assigned_at TIMESTAMP,
+          work_started_at TIMESTAMP,
+          completed_at TIMESTAMP,
           client_confirmed BOOLEAN DEFAULT FALSE,
           created_at TIMESTAMP DEFAULT NOW()
         );
@@ -168,6 +178,7 @@ export async function ensureDbInitialized(): Promise<boolean> {
           title VARCHAR(255) NOT NULL,
           subtitle TEXT,
           image_url TEXT,
+          link TEXT,
           link_url TEXT,
           sort_order INTEGER DEFAULT 0,
           active BOOLEAN DEFAULT TRUE,
@@ -178,11 +189,9 @@ export async function ensureDbInitialized(): Promise<boolean> {
           id SERIAL PRIMARY KEY,
           client_name VARCHAR(255) NOT NULL,
           rating INTEGER DEFAULT 5,
-          comment TEXT NOT NULL,
-          service_name VARCHAR(255),
+          comment TEXT,
           location VARCHAR(255),
-          avatar_url TEXT,
-          status VARCHAR(50) DEFAULT 'approved',
+          service_id INTEGER,
           featured BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP DEFAULT NOW()
         );
@@ -191,7 +200,7 @@ export async function ensureDbInitialized(): Promise<boolean> {
           id SERIAL PRIMARY KEY,
           question TEXT NOT NULL,
           answer TEXT NOT NULL,
-          category VARCHAR(100) DEFAULT 'General',
+          category VARCHAR(100) DEFAULT 'general',
           sort_order INTEGER DEFAULT 0,
           active BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP DEFAULT NOW()
@@ -200,18 +209,17 @@ export async function ensureDbInitialized(): Promise<boolean> {
         CREATE TABLE IF NOT EXISTS service_areas (
           id SERIAL PRIMARY KEY,
           name VARCHAR(255) NOT NULL,
-          state VARCHAR(100) DEFAULT 'Abuja (FCT)',
-          coverage_type VARCHAR(50) DEFAULT 'primary',
+          state VARCHAR(100) NOT NULL DEFAULT 'FCT (Abuja)',
           active BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS provider_professions (
           id SERIAL PRIMARY KEY,
-          name VARCHAR(255) NOT NULL UNIQUE,
-          slug VARCHAR(255) NOT NULL UNIQUE,
+          name VARCHAR(255) NOT NULL,
+          category_id INTEGER,
           description TEXT,
-          icon VARCHAR(100),
+          icon VARCHAR(100) DEFAULT '🔧',
           sort_order INTEGER DEFAULT 0,
           active BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP DEFAULT NOW()
@@ -228,105 +236,106 @@ export async function ensureDbInitialized(): Promise<boolean> {
         CREATE TABLE IF NOT EXISTS project_gallery (
           id SERIAL PRIMARY KEY,
           title VARCHAR(255) NOT NULL,
-          category VARCHAR(100),
-          image_url TEXT NOT NULL,
-          caption TEXT,
+          description TEXT,
+          before_image_url TEXT,
+          after_image_url TEXT,
+          location VARCHAR(255),
+          featured BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP DEFAULT NOW()
         );
       `);
 
-      // 2. Sync / Upsert Categories
-      for (const c of serverStore.categories) {
-        await client.query(
-          `INSERT INTO categories (id, name, slug, description, icon, image_url, sort_order, active)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           ON CONFLICT (id) DO UPDATE SET
-             name = EXCLUDED.name,
-             slug = EXCLUDED.slug,
-             description = EXCLUDED.description,
-             icon = EXCLUDED.icon,
-             image_url = EXCLUDED.image_url,
-             sort_order = EXCLUDED.sort_order,
-             active = EXCLUDED.active`,
-          [c.id, c.name, c.slug, c.description, c.icon, c.imageUrl, c.sortOrder || 0, true]
-        );
-      }
-
-      // 3. Sync / Upsert Subcategories
-      for (const s of serverStore.subcategories) {
-        await client.query(
-          `INSERT INTO subcategories (id, category_id, name, slug, description, icon, image_url, sort_order, active)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           ON CONFLICT (id) DO UPDATE SET
-             category_id = EXCLUDED.category_id,
-             name = EXCLUDED.name,
-             slug = EXCLUDED.slug,
-             description = EXCLUDED.description,
-             icon = EXCLUDED.icon,
-             image_url = EXCLUDED.image_url,
-             sort_order = EXCLUDED.sort_order,
-             active = EXCLUDED.active`,
-          [s.id, s.categoryId, s.name, s.slug, s.description, s.icon, s.imageUrl, s.sortOrder || 0, true]
-        );
-      }
-
-      // 4. Sync / Upsert all 16 Negotiated Services
-      for (const s of serverStore.services) {
-        await client.query(
-          `INSERT INTO services (id, subcategory_id, category_id, name, slug, short_description, full_description, image_url, gallery, price, featured, sort_order, active)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-           ON CONFLICT (id) DO UPDATE SET
-             subcategory_id = EXCLUDED.subcategory_id,
-             category_id = EXCLUDED.category_id,
-             name = EXCLUDED.name,
-             slug = EXCLUDED.slug,
-             short_description = EXCLUDED.short_description,
-             full_description = EXCLUDED.full_description,
-             image_url = EXCLUDED.image_url,
-             gallery = EXCLUDED.gallery,
-             price = EXCLUDED.price,
-             featured = EXCLUDED.featured,
-             sort_order = EXCLUDED.sort_order,
-             active = EXCLUDED.active`,
-          [s.id, s.subcategoryId, s.categoryId, s.name, s.slug, s.shortDescription, s.fullDescription, s.imageUrl, s.gallery, s.price || null, s.featured || false, s.sortOrder || 0, true]
-        );
-      }
-
-      // 5. Sync / Upsert Professions
-      for (const p of serverStore.professions) {
-        await client.query(
-          `INSERT INTO provider_professions (id, name, slug, description, icon, sort_order, active)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           ON CONFLICT (id) DO UPDATE SET
-             name = EXCLUDED.name,
-             slug = EXCLUDED.slug,
-             description = EXCLUDED.description,
-             icon = EXCLUDED.icon,
-             sort_order = EXCLUDED.sort_order,
-             active = EXCLUDED.active`,
-          [p.id, p.name, p.slug, p.description, p.icon, p.sortOrder || 0, true]
-        );
-      }
-
-      // Reset auto-increment sequences
+      // 2. Self-Healing Schema Alterations (guarantee all columns exist without crashing)
       await client.query(`
-        SELECT setval(pg_get_serial_sequence('categories', 'id'), coalesce(max(id), 0) + 1, false) FROM categories;
-        SELECT setval(pg_get_serial_sequence('subcategories', 'id'), coalesce(max(id), 0) + 1, false) FROM subcategories;
-        SELECT setval(pg_get_serial_sequence('services', 'id'), coalesce(max(id), 0) + 1, false) FROM services;
-        SELECT setval(pg_get_serial_sequence('provider_professions', 'id'), coalesce(max(id), 0) + 1, false) FROM provider_professions;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS experience_years INTEGER;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS qualifications TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS id_document_url TEXT;
+
+        ALTER TABLE services ADD COLUMN IF NOT EXISTS features TEXT;
+        ALTER TABLE services ADD COLUMN IF NOT EXISTS estimated_price_range VARCHAR(255);
+        ALTER TABLE services ADD COLUMN IF NOT EXISTS pricing_type VARCHAR(50) DEFAULT 'quote';
+
+        ALTER TABLE service_requests ADD COLUMN IF NOT EXISTS milestone_photos TEXT;
+        ALTER TABLE service_requests ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMP;
+        ALTER TABLE service_requests ADD COLUMN IF NOT EXISTS work_started_at TIMESTAMP;
+        ALTER TABLE service_requests ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
+
+        ALTER TABLE banners ADD COLUMN IF NOT EXISTS link TEXT;
+        ALTER TABLE banners ADD COLUMN IF NOT EXISTS link_url TEXT;
       `);
 
+      // 3. Auto-seed Categories if table is empty
+      const catCount = await client.query("SELECT COUNT(*) FROM categories");
+      if (parseInt(catCount.rows[0].count) === 0) {
+        for (const cat of serverStore.categories) {
+          await client.query(
+            `INSERT INTO categories (id, name, slug, description, icon, image_url, sort_order, active)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, icon = EXCLUDED.icon, image_url = EXCLUDED.image_url`,
+            [cat.id, cat.name, cat.slug, cat.description, cat.icon, cat.imageUrl, cat.sortOrder, cat.active]
+          );
+        }
+      }
+
+      // 4. Auto-seed/Sync Services if services table is empty
+      const svcCount = await client.query("SELECT COUNT(*) FROM services");
+      if (parseInt(svcCount.rows[0].count) === 0) {
+        for (const svc of serverStore.services) {
+          await client.query(
+            `INSERT INTO services (id, subcategory_id, category_id, name, slug, short_description, full_description, image_url, price, featured, sort_order, active, features)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             ON CONFLICT (id) DO UPDATE SET 
+               name = EXCLUDED.name,
+               category_id = EXCLUDED.category_id,
+               short_description = EXCLUDED.short_description,
+               full_description = EXCLUDED.full_description,
+               image_url = EXCLUDED.image_url,
+               price = EXCLUDED.price,
+               featured = EXCLUDED.featured,
+               sort_order = EXCLUDED.sort_order,
+               active = EXCLUDED.active,
+               features = EXCLUDED.features`,
+            [
+              svc.id,
+              svc.subcategoryId || null,
+              svc.categoryId,
+              svc.name,
+              svc.slug,
+              svc.shortDescription,
+              svc.fullDescription,
+              svc.imageUrl,
+              svc.price ?? null,
+              svc.featured ?? false,
+              svc.sortOrder ?? 0,
+              svc.active ?? true,
+              svc.features ? JSON.stringify(svc.features) : null,
+            ]
+          );
+        }
+      }
+
+      // 5. Auto-seed Banners if empty
+      const banCount = await client.query("SELECT COUNT(*) FROM banners");
+      if (parseInt(banCount.rows[0].count) === 0) {
+        for (const b of serverStore.banners) {
+          await client.query(
+            `INSERT INTO banners (id, title, subtitle, image_url, link, link_url, sort_order, active)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, subtitle = EXCLUDED.subtitle, image_url = EXCLUDED.image_url`,
+            [b.id, b.title, b.subtitle, b.imageUrl, b.link || "/explore", b.link || "/explore", b.sortOrder || 1, b.active !== false]
+          );
+        }
+      }
+
       globalForDb.__dbInitialized = true;
-      console.log("[QuestMore DB] PostgreSQL tables initialized and ready with 16 negotiated services.");
+      console.log("✅ [QuestMore DB] PostgreSQL database successfully initialized and synchronized!");
       return true;
     } finally {
       client.release();
     }
   } catch (err) {
-    console.error("[QuestMore DB] Failed to auto-initialize PostgreSQL:", err);
+    console.warn("[QuestMore DB] Auto-initialization warning:", err);
     return false;
   }
 }
-
-// Trigger initialization in background on import
-ensureDbInitialized().catch(() => {});
