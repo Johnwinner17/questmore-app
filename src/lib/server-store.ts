@@ -42,7 +42,7 @@ export const serverStore: ServerStore =
     professions: [...mockProfessions],
     banners: [...mockBanners],
     reviews: [...mockReviews],
-    users: [...mockUsers],
+    users: [],
     faqs: [...mockFaqs],
     areas: [...mockAreas],
     bookingFee: 5000,

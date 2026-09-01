@@ -312,19 +312,23 @@ export function PaymentModal({
                 </div>
               )}
 
-              {/* Supported Payment Channels via Paystack */}
-              <div className="rounded-2xl bg-white border border-slate-200/90 p-3.5 space-y-2">
+              {/* Official Paystack Security Guarantee */}
+              <div className="rounded-2xl bg-slate-50 border border-slate-200/90 p-3.5 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11.5px] font-bold text-slate-700">Supported Channels</span>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    🔒 256-Bit SSL Encrypted
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[13px]">🛡️</span>
+                    <span className="text-[12px] font-extrabold text-slate-800">
+                      Secured by Paystack
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-black text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                    Instant Bank Verification
                   </span>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap text-[11px] font-medium text-slate-600">
-                  <span className="bg-slate-100 px-2 py-1 rounded-lg">💳 Debit Card (Mastercard/Visa/Verve)</span>
-                  <span className="bg-slate-100 px-2 py-1 rounded-lg">🏦 Bank Transfer</span>
-                  <span className="bg-slate-100 px-2 py-1 rounded-lg">📱 USSD</span>
-                  <span className="bg-slate-100 px-2 py-1 rounded-lg">⚡ Apple Pay</span>
+                <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-bold text-slate-600">
+                  <span className="bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">💳 Card (Mastercard / Visa / Verve)</span>
+                  <span className="bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">🏦 Bank Transfer</span>
+                  <span className="bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">📱 USSD</span>
                 </div>
               </div>
             </div>

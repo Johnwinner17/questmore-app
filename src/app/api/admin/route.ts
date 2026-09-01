@@ -94,46 +94,37 @@ export async function GET(req: NextRequest) {
           const pendingPayments = combinedReqs.filter(r => r.paymentStatus !== "successful").length;
 
           return NextResponse.json({
-            categories: catCount?.c || serverStore.categories.length,
-            services: svcCount?.c || serverStore.services.length,
-            requests: reqCount?.c || combinedReqs.length,
-            users: allUsers?.c || serverStore.users.length,
-            clients: clientCount[0]?.c || serverStore.users.filter(u => u.role === "client").length,
-            providers: providerCount[0]?.c || serverStore.users.filter(u => u.role === "provider").length,
-            pendingApplications: pendingApps[0]?.c || serverStore.users.filter(u => u.verificationStatus === "awaiting_verification").length,
-            verifiedProviders: verifiedProviders[0]?.c || serverStore.users.filter(u => u.role === "provider" && u.verificationStatus === "verified").length,
-            pendingRequests: pendingReqs[0]?.c || combinedReqs.filter(r => r.jobStatus === "awaiting_admin_review" || r.status === "pending").length,
-            activeJobs: activeJobs[0]?.c || combinedReqs.filter(r => r.jobStatus === "work_in_progress" || r.jobStatus === "provider_assigned").length,
-            completedJobs: completedJobs[0]?.c || combinedReqs.filter(r => r.jobStatus === "completed" || r.status === "completed").length,
+            categories: Number(catCount?.c ?? serverStore.categories.length),
+            services: Number(svcCount?.c ?? serverStore.services.length),
+            requests: Number(reqCount?.c ?? combinedReqs.length),
+            users: Number(allUsers?.c ?? 0),
+            clients: Number(clientCount[0]?.c ?? 0),
+            providers: Number(providerCount[0]?.c ?? 0),
+            pendingApplications: Number(pendingApps[0]?.c ?? 0),
+            verifiedProviders: Number(verifiedProviders[0]?.c ?? 0),
+            pendingRequests: Number(pendingReqs[0]?.c ?? 0),
+            activeJobs: Number(activeJobs[0]?.c ?? 0),
+            completedJobs: Number(completedJobs[0]?.c ?? 0),
             bookingFeesTotal: totalBookingFees,
             totalRevenue: totalRevenue,
             pendingPayments: pendingPayments,
             bookingFeeConfig: serverStore.bookingFee || 5000,
           });
         } catch (err) {
-          const clients = serverStore.users.filter(u => u.role === "client").length;
-          const providers = serverStore.users.filter(u => u.role === "provider").length;
-          const pendingApps = serverStore.users.filter(u => u.verificationStatus === "awaiting_verification").length;
-          const verified = serverStore.users.filter(u => u.role === "provider" && u.verificationStatus === "verified").length;
-          const activeJobs = serverStore.requests.filter(r => r.jobStatus === "work_in_progress" || r.jobStatus === "provider_assigned").length;
-          const completed = serverStore.requests.filter(r => r.jobStatus === "completed" || r.status === "completed").length;
-          const totalFees = serverStore.requests.reduce((a, b) => a + (b.bookingFee || 5000), 0);
-          const totalRev = serverStore.requests.reduce((a, b) => a + (b.totalAmount || 5000), 0);
-
           return NextResponse.json({
             categories: serverStore.categories.length,
             services: serverStore.services.length,
             requests: serverStore.requests.length,
-            users: serverStore.users.length,
-            clients,
-            providers,
-            pendingApplications: pendingApps,
-            verifiedProviders: verified,
-            pendingRequests: serverStore.requests.filter(r => r.jobStatus === "awaiting_admin_review" || r.status === "pending").length,
-            activeJobs,
-            completedJobs,
-            bookingFeesTotal: totalFees,
-            totalRevenue: totalRev,
+            users: 0,
+            clients: 0,
+            providers: 0,
+            pendingApplications: 0,
+            verifiedProviders: 0,
+            pendingRequests: 0,
+            activeJobs: 0,
+            completedJobs: 0,
+            bookingFeesTotal: 0,
+            totalRevenue: 0,
             pendingPayments: 0,
             bookingFeeConfig: serverStore.bookingFee || 5000,
           });
